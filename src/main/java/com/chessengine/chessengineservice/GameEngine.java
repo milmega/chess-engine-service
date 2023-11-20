@@ -1,5 +1,7 @@
 package com.chessengine.chessengineservice;
 
+import java.util.List;
+
 public class GameEngine {
 
     private static int[][] board = {
@@ -22,15 +24,21 @@ public class GameEngine {
     public static boolean[] whiteCastling = {false, false, false};
     public static boolean[] blackCastling = {false, false, false};
 
+    MoveGenerator moveGenerator;
+    Evaluator evaluator;
+
     public GameEngine() {
+        moveGenerator = new MoveGenerator();
+        evaluator = new Evaluator();
+    }
+
+    public static void startGame() {
 
     }
 
-    public void startGame() {
-
-    }
-
-    public void calculateNextMove() {
+    private void calculateNextMove(boolean colour) {
+        List<Move> allMoves = moveGenerator.generateAllMoves(colour);
+        Move bestMove = evaluator.getBestMove(allMoves, board);
 
     }
 
