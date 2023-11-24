@@ -6,17 +6,17 @@ import java.util.List;
 public class Move {
     private int x;
     private int y;
-    private List<Move> destinations = new ArrayList<>();
+    private Move destination;
 
     public Move(int x, int y) {
         this.x = x;
         this.y = y;
     }
 
-    public Move(int x, int y, ArrayList<Move> destinations) {
+    public Move(int x, int y, int destX, int destY) {
         this.x = x;
         this.y = y;
-        this.destinations = destinations;
+        this.destination = new Move(destX, destY);
     }
 
     public void setMove(int x, int y) {
@@ -32,7 +32,7 @@ public class Move {
         return y;
     }
 
-    public List<Move> getDestinations() {
-        return destinations;
+    public Move getDestination() {
+        return destination;
     }
 }

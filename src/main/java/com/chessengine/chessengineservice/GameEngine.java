@@ -1,20 +1,9 @@
 package com.chessengine.chessengineservice;
 
 import java.util.List;
+import java.util.concurrent.ThreadLocalRandom;
 
 public class GameEngine {
-
-    private static int[][] board = {
-            {-4, -2, -3, -5, -6, -3, -2, -4},
-            {-1, -1, -1, -1, -1, -1, -1, -1},
-            {0, 0, 0, 0, 0, 0, 0, 0},
-            {0, 0, 0, 0, 0, 0, 0, 0},
-            {0, 0, 0, 0, 0, 0, 0, 0},
-            {0, 0, 0, 0, 0, 0, 0, 0},
-            {1, 1, 1, 1, 1, 1, 1, 1},
-            {4, 2, 3, 5, 6, 3, 2, 4}
-    };
-
     private static boolean turn = true; //TRUE = WHITE, FALSE = BLACK
     private static int whiteKingPositionX = 7;
     private static int whiteKingPositionY = 4;
@@ -36,24 +25,26 @@ public class GameEngine {
 
     }
 
-    private void calculateNextMove(boolean colour) {
-        List<Move> allMoves = moveGenerator.generateAllMoves(colour);
-        Move bestMove = evaluator.getBestMove(allMoves, board);
+    public Move calculateNextMove(int colour, int[][] board) {
+        List<Move> allMoves = moveGenerator.generateAllMoves(colour, board);
+        System.out.println("allMoves size: " + allMoves.size());
+        int randomNum = ThreadLocalRandom.current().nextInt(0, allMoves.size());
+        if(!allMoves.isEmpty()) {
+            return allMoves.get(randomNum);
+        }
+        return  new Move(0,0);
+        //Move bestMove = evaluator.getBestMove(allMoves, board); //TODO: write some evaluation functions to determine best move
 
     }
 
-    public static int[][] getBoard() {
-        return board;
-    }
-
-    public static int[] getKingPosition(boolean colour) {
-        return colour
+    public static int[] getKingPosition(int colour) {
+        return colour > 0
                 ? new int[] {whiteKingPositionX, whiteKingPositionY}
                 : new int[] {blackKingPositionX, blackKingPositionY};
     }
 
-    public static void setKingPosition(boolean colour, int x, int y) {
-        if(colour) {
+    public static void setKingPosition(int colour, int x, int y) {
+        if(colour > 0) {
             whiteKingPositionX = x;
             whiteKingPositionY = y;
         } else {
@@ -63,7 +54,28 @@ public class GameEngine {
 
     }
 
-    public static boolean[] getCastling(boolean colour) {
-        return colour ? whiteCastling : blackCastling;
+    public static boolean[] getCastling(int colour) { //TODO: update castling from the board from frontend
+        return colour > 0 ? whiteCastling : blackCastling;
+    }
+
+    public static void setCastling(int colour, String castling) {
+        if(colour > 0) {
+            whiteCastling[0] = castling.charAt(0) == '1';
+            whiteCastling[1] = castling.charAt(1) == '1';
+            whiteCastling[2] = castling.charAt(2) == '1';
+        } else {
+            blackCastling[0] = castling.charAt(0) == '1';
+            blackCastling[1] = castling.charAt(1) == '1';
+            blackCastling[2] = castling.charAt(2) == '1';
+        }
+    }
+
+    public static int[][] getDeepCopy(int[][] array) {
+        int[][] resultArray = new int[array.length][array[0].length];
+        for(int i = 0; i < array.length; i++) {
+            int[] resultRow = array[i].clone();
+            resultArray[i] = resultRow;
+        }
+        return resultArray;
     }
 }
