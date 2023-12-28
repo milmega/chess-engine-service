@@ -107,7 +107,7 @@ public class MoveGenerator {
         if (piece == PAWN) {
             List<Move> pawnMoves = new ArrayList<>();
             if(colour > 0) {
-                if (board[x-1][y] == 0){
+                if (x > 0 && board[x-1][y] == 0){
                     pawnMoves.add(new Move(-1, 0));
                 }
                 if (x == 6 && board[5][y] == 0 && board[4][y] == 0) {
@@ -120,7 +120,7 @@ public class MoveGenerator {
                     pawnMoves.add(new Move(-1, 1));
                 }
             } else {
-                if (board[x+1][y] == 0){
+                if (x < 7 && board[x+1][y] == 0){
                     pawnMoves.add(new Move(1, 0));
                 }
                 if (x == 1 && board[2][y] == 0 && board[3][y] == 0) {
@@ -204,7 +204,7 @@ public class MoveGenerator {
     }
 
     //checks if king in checkmated
-    private boolean isKingCheckmated(int colour, int[][] board) {
+    public boolean isKingCheckmated(int colour, int[][] board) {
         for (int i = 0; i < 8; i++) {
             for (int j = 0; j < 8; j++) {
                 if (board[i][j] == 0 || isSameColour(colour, board[i][j])) {
