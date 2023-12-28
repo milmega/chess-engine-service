@@ -26,14 +26,9 @@ public class GameEngine {
     }
 
     public Move calculateNextMove(int colour, int[][] board) {
-        List<Move> allMoves = moveGenerator.generateAllMoves(colour, board);
-        System.out.println("allMoves size: " + allMoves.size());
-        int randomNum = ThreadLocalRandom.current().nextInt(0, allMoves.size());
-        if(!allMoves.isEmpty()) {
-            return allMoves.get(randomNum);
-        }
-        return  new Move(0,0);
-        //Move bestMove = evaluator.getBestMove(allMoves, board); //TODO: write some evaluation functions to determine best move
+        //Move bestMove = evaluator.getBestMove(colour, board, 5); //TODO: write some evaluation functions to determine best move
+        Move bestMove = evaluator.getBestMove(colour, board);
+        return bestMove;
 
     }
 
