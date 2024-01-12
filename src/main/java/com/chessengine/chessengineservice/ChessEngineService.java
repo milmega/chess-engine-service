@@ -1,19 +1,27 @@
 package com.chessengine.chessengineservice;
 
 public class ChessEngineService {
+    MoveGenerator moveGenerator;
+    Evaluator evaluator;
+    Board board;
 
-    GameEngine gameEngine;
     public ChessEngineService() {
-        gameEngine = new GameEngine();
+        moveGenerator = new MoveGenerator();
+        board = new Board();
+        evaluator = new Evaluator();
     }
 
-    public String GetNextMove(int colour, int[][] board) {
+    public String GetNextMove(int colour) {
+        Move nextMove = evaluator.getBestMove(colour, board);
+        board.makeMove(nextMove, false);
 
-        Move nextMove = gameEngine.calculateNextMove(colour, board);
+        return String.valueOf(nextMove.currentSquare/8) + //TODO: convert frontend and return to handle 1d array
+                String.valueOf(nextMove.currentSquare%8) +
+                String.valueOf(nextMove.targetSquare/8) +
+                String.valueOf(nextMove.targetSquare%8);
+    }
 
-        return String.valueOf(nextMove.getX()) +
-                String.valueOf(nextMove.getY()) +
-                String.valueOf(nextMove.getDestination().getX()) +
-                String.valueOf(nextMove.getDestination().getY());
+    public Board getBoard() {
+        return this.board;
     }
 }
