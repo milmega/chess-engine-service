@@ -13,8 +13,8 @@ public class MoveDetails {
         this.targetPiece = targetPiece;
         this.whiteKingPosition = whiteKingPosition;
         this.blackKingPosition = blackKingPosition;
-        this.whiteCastling = whiteCastling.clone(); //TODO: should it be with clone
-        this.blackCastling = blackCastling.clone();
+        this.whiteCastling = whiteCastling;
+        this.blackCastling = blackCastling;
         rookMove = new Pair<>(-1, -1);
     }
 

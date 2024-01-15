@@ -98,10 +98,9 @@ public class MoveGenerator {
     //returns list of attack moves for a figure to show a circle around potential prey or a list of all squares under attack that king cannot go to
     public List<Move> getAttackMoves(int pos, List<Pair<Integer, Integer>> possibleMoves, Board board) {
         int colour = board.square[pos] > 0 ? 1 : -1;
-        var x = possibleMoves.stream()
+        return possibleMoves.stream()
                 .filter(move -> board.square[pos+move.first*8+move.second] != 0 && !isSameColour(board.square[pos+move.first*8+move.second], colour))
                 .map(move -> new Move(pos, pos + move.first*8 + move.second)).toList();
-        return x;
     }
 
     public List<Pair<Integer, Integer>> getMovesForPiece(int colour, int pos, Board board) {
@@ -210,20 +209,19 @@ public class MoveGenerator {
         boolean rightCastlingEnabled = true;
 
         for (int i = 0; i < 64; i++) {
-            if (!leftCastlingEnabled && !rightCastlingEnabled) { //TODO: it is always false or not?
+            if (!leftCastlingEnabled && !rightCastlingEnabled) {
                 break;
             }
             if (board.square[i] == 0 || isSameColour(colour, board.square[i])) {
                 continue;
             }
             List<Pair<Integer, Integer>> moves = getMoves(i, board);
-            //int finalI = i;
             int finalI = i/8;
             int finalJ = i%8;
             leftCastlingEnabled = moves.stream().noneMatch(move -> move.first + finalI  == row && move.second + finalJ < 5); //TODO: change the evaluation
             rightCastlingEnabled = moves.stream().noneMatch(move -> move.first + finalI == row && move.second + finalJ > 3);
         }
-        if (!castling[1] && leftCastlingEnabled && board.square[row*8+1] == 0 && board.square[row*8+2] == 0 && board.square[row*8+3] == 0 ) { //if left rook hasn't moved
+        if (!castling[1] && leftCastlingEnabled && board.square[row*8+1] == 0 && board.square[row*8+2] == 0 && board.square[row*8+3] == 0) { //if left rook hasn't moved
             castlingMoves.add(new Pair<>(0, -2));
         }
         if (!castling[2] && rightCastlingEnabled && board.square[row*8+5] == 0 && board.square[row*8+6] == 0) { //if right rook hasn't moved

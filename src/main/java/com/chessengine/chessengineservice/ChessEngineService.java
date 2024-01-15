@@ -11,14 +11,11 @@ public class ChessEngineService {
         evaluator = new Evaluator();
     }
 
-    public String GetNextMove(int colour) {
+    public String GetNextMoveAsString(int colour) {
         Move nextMove = evaluator.getBestMove(colour, board);
         board.makeMove(nextMove, false);
 
-        return String.valueOf(nextMove.currentSquare/8) + //TODO: convert frontend and return to handle 1d array
-                String.valueOf(nextMove.currentSquare%8) +
-                String.valueOf(nextMove.targetSquare/8) +
-                String.valueOf(nextMove.targetSquare%8);
+        return nextMove.currentSquare + "," + nextMove.targetSquare;
     }
 
     public Board getBoard() {

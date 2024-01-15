@@ -12,8 +12,10 @@ public class ChessEngineController {
     public String GetNextMove(@RequestParam int start,
                               @RequestParam int destination,
                               @RequestParam int colour) {
-        chessEngineService.getBoard().makeMove(new Move(start, destination), false); //TODO: there is inconsistency between front-end board and backend board
-        return chessEngineService.GetNextMove(colour);
+        if(start > -1) { // if computer is white, start and destination are -1
+            chessEngineService.getBoard().makeMove(new Move(start, destination), false);
+        }
+        return chessEngineService.GetNextMoveAsString(colour);
     }
 
     @PostMapping("/reset")
