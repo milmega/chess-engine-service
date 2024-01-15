@@ -5,6 +5,7 @@ import java.util.Arrays;
 import java.util.List;
 
 import static com.chessengine.chessengineservice.Piece.*;
+import static java.lang.Math.abs;
 
 public class MoveGenerator {
     public List<Move> generateAllMoves(int colour, Board board) {
@@ -39,7 +40,7 @@ public class MoveGenerator {
         }).toList());
 
         boolean[] castling = board.getCastling(colour);
-        if (Math.abs(piece) == KING && !castling[0] && (!castling[1] || !castling[2])) {
+        if (abs(piece) == KING && !castling[0] && (!castling[1] || !castling[2])) {
             List<Pair<Integer, Integer>> castlingMoves = getCastlingMoves(colour, board);
             validMoves.addAll(castlingMoves);
         }
@@ -51,9 +52,18 @@ public class MoveGenerator {
         int colour = piece > 0 ? 1 : -1;
         int x = pos/8;
         int y = pos%8;
-
         List<Pair<Integer, Integer>> movesForFigure = getMovesForPiece(colour, pos, board);
-        if (Math.abs(piece) == KING || Math.abs(piece) == KNIGHT || Math.abs(piece) == PAWN) {
+        Move lastMove = board.getLastMove();
+        int lastMovePiece = lastMove.currentSquare == -1 ? 0 : board.square[lastMove.targetSquare];
+
+        if (abs(lastMovePiece) == PAWN && abs(board.square[pos]) == PAWN) {
+            Pair<Integer, Integer> enpassant = getEnpassantMove(piece, x, y, lastMove);
+            if (enpassant != null) {
+                movesForFigure.add(enpassant);
+            }
+        }
+
+        if (abs(piece) == KING || abs(piece) == KNIGHT || abs(piece) == PAWN) {
             return movesForFigure.stream().filter(move -> { // return valid moves
                 int newX = x + move.first;
                 int newY = y + move.second;
@@ -96,36 +106,35 @@ public class MoveGenerator {
 
     public List<Pair<Integer, Integer>> getMovesForPiece(int colour, int pos, Board board) {
         List<Pair<Integer, Integer>> pieceMoves = new ArrayList<>();
-        int[] squareCopy = board.square.clone(); //TODO: is it needed
-        int piece = Math.abs(squareCopy[pos]);
+        int piece = abs(board.square[pos]);
         int x = pos / 8;
         int y = pos % 8;
-        if (piece == PAWN) { //TODO: implement enpassant
+        if (piece == PAWN) {
             List<Pair<Integer, Integer>> pawnMoves = new ArrayList<>();
             if(colour > 0) {
-                if (x > 0 && squareCopy[(x-1)*8+y] == 0){
+                if (x > 0 && board.square[(x-1)*8+y] == 0){
                     pawnMoves.add(new Pair<>(-1, 0));
                 }
-                if (x == 6 && squareCopy[40+y] == 0 && squareCopy[32+y] == 0) {
+                if (x == 6 && board.square[40+y] == 0 && board.square[32+y] == 0) {
                     pawnMoves.add(new Pair<>(-2, 0));
                 }
-                if (x > 0 && y > 0 && squareCopy[(x-1)*8+(y-1)] < 0) { //value smaller than 0 it's black
+                if (x > 0 && y > 0 && board.square[(x-1)*8+(y-1)] < 0) { //value smaller than 0 it's black
                     pawnMoves.add(new Pair<>(-1, -1));
                 }
-                if (x > 0 && y < 7 && squareCopy[(x-1)*8+(y+1)] < 0) { //value smaller than 0 it's black
+                if (x > 0 && y < 7 && board.square[(x-1)*8+(y+1)] < 0) { //value smaller than 0 it's black
                     pawnMoves.add(new Pair<>(-1, 1));
                 }
             } else {
-                if (x < 7 && squareCopy[(x+1)*8+y] == 0){
+                if (x < 7 && board.square[(x+1)*8+y] == 0){
                     pawnMoves.add(new Pair<>(1, 0));
                 }
-                if (x == 1 && squareCopy[16+y] == 0 && squareCopy[24+y] == 0) {
+                if (x == 1 && board.square[16+y] == 0 && board.square[24+y] == 0) {
                     pawnMoves.add(new Pair<>(2, 0));
                 }
-                if (x < 7 && y > 0 && squareCopy[(x+1)*8+(y-1)] > 0) { //value bigger than 0 it's white
+                if (x < 7 && y > 0 && board.square[(x+1)*8+(y-1)] > 0) { //value bigger than 0 it's white
                     pawnMoves.add(new Pair<>(1, -1));
                 }
-                if (x < 7 && y < 7 && squareCopy[(x+1)*8+(y+1)] > 0) { //value bigger than 0 it's white
+                if (x < 7 && y < 7 && board.square[(x+1)*8+(y+1)] > 0) { //value bigger than 0 it's white
                     pawnMoves.add(new Pair<>(1, 1));
                 }
             }
@@ -179,6 +188,17 @@ public class MoveGenerator {
                     new Pair<>(-1, -1));
         }
         return pieceMoves;
+    }
+
+    private Pair<Integer, Integer> getEnpassantMove(int piece, int x, int y, Move lastMove) {
+        int lastMoveFromX = lastMove.currentSquare/8;
+        int lastMoveToX = lastMove.targetSquare/8;
+        int lastMoveToY = lastMove.targetSquare%8;
+
+        if (Math.abs(lastMoveFromX - lastMoveToX) > 1 && x == lastMoveToX && Math.abs(y - lastMoveToY) == 1) {
+            return new Pair<>(piece > 0 ? -1 : 1, lastMoveToY-y);
+        }
+        return null;
     }
 
     private List<Pair<Integer, Integer>> getCastlingMoves(int colour, Board board) {

@@ -13,16 +13,17 @@ public class Board {
     private boolean[] whiteCastling;
     private boolean[] blackCastling;
     private final Stack<MoveDetails> moveDetailsStack;
-
     private final MoveGenerator moveGenerator;
+    private Move lastMove;
 
     public Board() {
         moveGenerator = new MoveGenerator();
         moveDetailsStack = new Stack<>();
         whiteKingPosition = 60;
-        blackKingPosition = 6;
+        blackKingPosition = 4;
         whiteCastling = new boolean[] {false, false, false};
-        blackCastling = new boolean[] {true, false, false};
+        blackCastling = new boolean[] {false, false, false};
+        lastMove = new Move(-1, -1);
         initializeBoard();
     }
 
@@ -41,10 +42,10 @@ public class Board {
     public void initializeBoard() {
         square = new int[] {
                 -4, -2, -3, -5, -6, -3, -2, -4,
-                -1, -1, -1, -1, -1, -1, -1, -1,
+                -1, -1, -1, 0, -1, -1, -1, -1,
                 0, 0, 0, 0, 0, 0, 0, 0,
                 0, 0, 0, 0, 0, 0, 0, 0,
-                0, 0, 0, 0, 0, 0, 0, 0,
+                0, 0, 0, -1, 0, 0, 0, 0,
                 0, 0, 0, 0, 0, 0, 0, 0,
                 1, 1, 1, 1, 1, 1, 1, 1,
                 4, 2, 3, 5, 6, 3, 2, 4};
@@ -103,6 +104,8 @@ public class Board {
         if (unmakeMove) {
             md.setRookMove(rookMove);
             moveDetailsStack.push(md);
+        } else {
+            lastMove = move.getCopy();
         }
 
         int start = move.currentSquare;
@@ -180,7 +183,7 @@ public class Board {
         }
     }
 
-    public boolean[] getCastling(int colour) { //TODO: update castling from the board from frontend
+    public boolean[] getCastling(int colour) {
         return colour > 0 ? whiteCastling : blackCastling;
     }
 
@@ -202,6 +205,10 @@ public class Board {
         } else {
             blackCastling = castling.clone();
         }
+    }
+
+    public Move getLastMove() {
+        return lastMove;
     }
 
     public boolean isSameColour(int piece1, int piece2) {
