@@ -7,6 +7,10 @@ import java.util.List;
 import static com.chessengine.chessengineservice.Piece.*;
 import static java.lang.Math.abs;
 
+//TODO: implement move ordering
+//TODO: implement opening tree
+//TODO: implement endgaame
+
 public class MoveGenerator {
     public List<Move> generateAllMoves(int colour, Board board) {
         List<Move> allMoves = new ArrayList<>();
@@ -31,10 +35,7 @@ public class MoveGenerator {
         List<Pair<Integer, Integer>> validMoves = new ArrayList<>(moves.stream().filter(move -> {
             int newPos = pos+move.first*8+move.second;
             board.makeMove(new Move(pos, newPos), true);
-
-            int kingPosition = board.getKingPosition(colour);
-            boolean isKingUnderCheck = board.isInCheck(kingPosition, board);
-
+            boolean isKingUnderCheck = board.isInCheck(colour);
             board.unmakeMove(new Move(pos, newPos));
             return !isKingUnderCheck;
         }).toList());

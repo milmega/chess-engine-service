@@ -56,8 +56,8 @@ public class Evaluator {
 
         List<Move> allMoves = moveGenerator.generateAllMoves(colour, board);
         if (allMoves.isEmpty()) {
-            if (board.isInCheckmate(colour)) {
-                return Integer.MIN_VALUE;
+            if (board.isInCheck(colour)) {
+                return MIN_VALUE;
             }
             return 0;
         }
