@@ -8,8 +8,4 @@ public class Piece {
     public static final int ROOK = 4;
     public static final int QUEEN = 5;
     public static final int KING = 6;
-
-    public Piece() {
-
-    }
 }

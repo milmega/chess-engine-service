@@ -7,14 +7,22 @@ import static com.chessengine.chessengineservice.Piece.*;
 import static java.lang.Math.abs;
 
 public class Board {
+    private final int GAME_START = 0;
+    private final int GAME_MIDDLE = 1;
+    private final int GAME_END = 2;
+    private final Stack<MoveDetails> moveDetailsStack;
+    private final MoveGenerator moveGenerator;
+    private int[] numberOfPieces;
     public int[] square;
     private int whiteKingPosition;
     private int blackKingPosition;
     private boolean[] whiteCastling;
     private boolean[] blackCastling;
-    private final Stack<MoveDetails> moveDetailsStack;
-    private final MoveGenerator moveGenerator;
     private Move lastMove;
+    private int captures;
+    private int gameStage;
+    private int moveCount;
+
 
     public Board() {
         moveGenerator = new MoveGenerator();
@@ -24,6 +32,10 @@ public class Board {
         whiteCastling = new boolean[] {false, false, false};
         blackCastling = new boolean[] {false, false, false};
         lastMove = new Move(-1, -1);
+        captures = 0;
+        moveCount = 0;
+        gameStage = GAME_START;
+        numberOfPieces = new int[] {7, 8, 7, 8}; // white not pawns, white pawns, black not pawns, black pawns
         initializeBoard();
     }
 
@@ -51,16 +63,32 @@ public class Board {
                 4, 2, 3, 5, 6, 3, 2, 4};
     }
 
+    public void resetBoard() {
+        initializeBoard();
+        moveDetailsStack.clear();
+        whiteKingPosition = 60;
+        blackKingPosition = 4;
+        whiteCastling = new boolean[] {false, false, false};
+        blackCastling = new boolean[] {false, false, false};
+        lastMove = new Move(-1, -1);
+        captures = 0;
+        moveCount = 0;
+        gameStage = GAME_START;
+        numberOfPieces = new int[] {7, 8, 7, 8}; // white not pawns, white pawns, black not pawns, black pawns
+    }
+
     // unmakeMove determines if the move will be reversed later. Saves necessary details to restore them later.
     public void makeMove(Move move, boolean unmakeMove) {
-        MoveDetails md = new MoveDetails(square[move.targetSquare], getKingPosition(1), getKingPosition(-1), getCastling(1), getCastling(-1));
+        int start = move.currentSquare;
+        int target = move.targetSquare;
+        MoveDetails md = new MoveDetails(square[target], getKingPosition(1), getKingPosition(-1), getCastling(1), getCastling(-1));
         Pair<Integer, Integer> rookMove = new Pair<>(-1, -1);
 
-        if (square[move.currentSquare] == KING) { // white castling
-            setKingPosition(1, move.targetSquare);
+        if (square[start] == KING) { // white castling
+            setKingPosition(1, target);
             setCastling(1, new boolean[] {true, true, true});
-            if (abs(move.targetSquare%8 - move.currentSquare%8) > 1) { // if king is doing castling, move rook accordingly
-                if (move.targetSquare == 58) {
+            if (abs(target%8 - start%8) > 1) { // if king is doing castling, move rook accordingly
+                if (target == 58) {
                     rookMove = new Pair<>(56, 59);
                     movePiece(56, 59, 0);
                 } else {
@@ -68,11 +96,11 @@ public class Board {
                     movePiece(63, 61, 0);
                 }
             }
-        } else if (square[move.currentSquare] == -KING) { // black castling
-            setKingPosition(-1, move.targetSquare);
+        } else if (square[start] == -KING) { // black castling
+            setKingPosition(-1, target);
             setCastling(-1, new boolean[] {true, true, true});
-            if (abs(move.targetSquare%8 - move.currentSquare%8) > 1) { // if king is doing castling, move rook accordingly
-                if (move.targetSquare == 2) {
+            if (abs(target%8 - start%8) > 1) { // if king is doing castling, move rook accordingly
+                if (target == 2) {
                     rookMove = new Pair<>(0, 3);
                     movePiece(0, 3, 0);
                 } else {
@@ -82,34 +110,31 @@ public class Board {
             }
         }
         // if a rook is moved, then disable castling
-        if (abs(square[move.currentSquare]) == ROOK) {
-            if (square[move.currentSquare] > 0 && (move.currentSquare == 56 || move.currentSquare == 63)) {
-                boolean[] whiteCastling = getCastling(1);
-                whiteCastling[move.currentSquare == 56 ? 1 : 2] = true;
-            } else if (square[move.currentSquare] < 0 && (move.currentSquare == 0 || move.currentSquare == 7)) {
-                boolean[] blackCastling = getCastling(-1);
-                blackCastling[move.currentSquare == 0 ? 1 : 2] = true;
-            }
-        }
+        disableCastlingIfRookInvolved(start);
         // if a rook is captured then disable castling
-        if (abs(square[move.targetSquare]) == ROOK) {
-            if (square[move.targetSquare] > 0 && (move.targetSquare == 56 || move.targetSquare == 63)) {
-                boolean[] whiteCastling = getCastling(1);
-                whiteCastling[move.targetSquare == 56 ? 1 : 2] = true;
-            } else if (square[move.targetSquare] < 0 && (move.targetSquare == 0 || move.targetSquare == 7)) {
-                boolean[] blackCastling = getCastling(-1);
-                blackCastling[move.targetSquare == 0 ? 1 : 2] = true;
-            }
-        }
+        disableCastlingIfRookInvolved(target);
+
         if (unmakeMove) {
             md.setRookMove(rookMove);
             moveDetailsStack.push(md);
         } else {
             lastMove = move.getCopy();
+            moveCount++;
+            if (square[target] != 0) {
+                captures++;
+                if (captures == 3) { //TODO: is it good value?
+                    gameStage = GAME_MIDDLE;
+                }
+                if(square[target] > 0) {
+                    numberOfPieces[square[target] > 1 ? 0 : 1]--;
+                } else {
+                    numberOfPieces[square[target] < -1 ? 2 : 3]--;
+                }
+                if(numberOfPieces[0] < 4 || numberOfPieces[2] < 4) {
+                    gameStage = GAME_END;
+                }
+            }
         }
-
-        int start = move.currentSquare;
-        int target = move.targetSquare;
         movePiece(start, target, 0);
     }
 
@@ -142,33 +167,19 @@ public class Board {
     }
 
     //checks if king is under check
-    public boolean isInCheck(int kingPosition, Board board) {
-        int colour = board.square[kingPosition] > 0 ? 1 : -1;
+    public boolean isInCheck(int colour) {
+        int kingPosition = getKingPosition(colour);
         for (int i = 0; i < 64; i++) {
-            if (board.square[i] == 0 || isSameColour(colour, board.square[i])) {
+            if (square[i] == 0 || isSameColour(colour, square[i])) {
                 continue;
             }
-            List<Pair<Integer, Integer>> moves = moveGenerator.getMoves(i, board);
-            List<Move> attackMoves = moveGenerator.getAttackMoves(i, moves, board);
+            List<Pair<Integer, Integer>> moves = moveGenerator.getMoves(i, this);
+            List<Move> attackMoves = moveGenerator.getAttackMoves(i, moves, this);
             if (attackMoves.stream().anyMatch(move -> kingPosition == move.targetSquare)) {
                 return true;
             }
         }
         return false;
-    }
-
-    //checks if king in checkmated
-    public boolean isInCheckmate(int colour) {
-        for (int i = 0; i < 64; i++) {
-            if (square[i] == 0 || isSameColour(colour, square[i])) {
-                continue;
-            }
-            List<Pair<Integer, Integer>> validMoves = moveGenerator.getValidMoves(i, this);
-            if (!validMoves.isEmpty()) {
-                return false;
-            }
-        }
-        return true;
     }
 
     public int getKingPosition(int colour) {
@@ -215,6 +226,19 @@ public class Board {
         return (piece1 > 0 && piece2 > 0) || (piece1 < 0 && piece2 < 0);
     }
 
+    private void disableCastlingIfRookInvolved(int index) {
+        if (abs(square[index]) == ROOK) {
+            if (square[index] > 0 && (index == 56 || index == 63)) {
+                boolean[] whiteCastling = getCastling(1);
+                whiteCastling[index == 56 ? 1 : 2] = true;
+            } else if (square[index] < 0 && (index == 0 || index == 7)) {
+                boolean[] blackCastling = getCastling(-1);
+                blackCastling[index == 0 ? 1 : 2] = true;
+            }
+        }
+    }
+
+    // moves a piece from start to target square. TargetPiece is a piece that was on a target square (needed for unmaking a move)
     private void movePiece(int start, int target, int targetPiece) {
         int piece = square[start];
         int colour = piece > 0 ? 1 : -1;
@@ -224,5 +248,13 @@ public class Board {
             square[target] = piece;
         }
         square[start] = targetPiece;
+    }
+
+    public int getGameStage() {
+        return gameStage;
+    }
+
+    public void setGameStage(int newGameStage) {
+        gameStage = newGameStage;
     }
 }

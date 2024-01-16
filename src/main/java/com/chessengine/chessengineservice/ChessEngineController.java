@@ -21,6 +21,6 @@ public class ChessEngineController {
     @PostMapping("/reset")
     @CrossOrigin(origins = "http://localhost:3000")
     public void Reset() {
-        chessEngineService.getBoard().initializeBoard();
+        chessEngineService.getBoard().resetBoard();
     }
 }

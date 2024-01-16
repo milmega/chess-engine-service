@@ -11,8 +11,9 @@ import static com.chessengine.chessengineservice.Piece.*;
 public class Evaluator {
 
     MoveGenerator moveGenerator;
-    private static int moveCount = 0;
-    private final int EVALUATION_DEPTH = 3;
+    private final int EVALUATION_DEPTH = 4;
+    private final int MAX_VALUE = 1000000000;
+    private final int MIN_VALUE = -1000000000;
 
     public Evaluator() {
         moveGenerator = new MoveGenerator();
@@ -23,12 +24,12 @@ public class Evaluator {
         List<Move> allMoves = moveGenerator.generateAllMoves(colour, board);
         System.out.println(allMoves.size());
         List<Move> bestMoves = new ArrayList<>();
-        int bestScore = Integer.MIN_VALUE;
+        int bestScore = MIN_VALUE;
 
         for(Move move : allMoves) {
             board.makeMove(move, true);
 
-            int score = -negamax(-colour, board, EVALUATION_DEPTH-1, Integer.MIN_VALUE, Integer.MAX_VALUE);
+            int score = -negamax(-colour, board, EVALUATION_DEPTH, MIN_VALUE, MAX_VALUE);
             System.out.println("From " + move.currentSquare/8 + ", " + move.currentSquare%8 + " to " + move.targetSquare/8 + ", " + move.targetSquare%8 + " - " + score);
 
             if(score == bestScore) {
@@ -49,9 +50,8 @@ public class Evaluator {
 
     private int negamax(int colour, Board board, int depth, int alpha, int beta) {
         if (depth == 0) {
-            var x = evaluateBoard(board) * colour;
+            return evaluateBoard(board) * colour;
             //printPrevMoves(prevMoves, x);
-            return x;
         }
 
         List<Move> allMoves = moveGenerator.generateAllMoves(colour, board);
@@ -59,11 +59,11 @@ public class Evaluator {
             if (board.isInCheck(colour)) {
                 return MIN_VALUE;
             }
-            return 0;
+            return 0; //TODO: add a penalty for a draw
         }
         //if is in check, return penalty for being in check
 
-        int bestScore = Integer.MIN_VALUE;
+        int bestScore = MIN_VALUE;
         for (Move move : allMoves) {
             board.makeMove(move, true);
             int score = -negamax(-colour, board, depth - 1, -beta, -alpha);
@@ -81,12 +81,13 @@ public class Evaluator {
 
     private int evaluateBoard(Board board) {
         int score = 0;
+        int gameStage = board.getGameStage();
         for (int i = 0; i < board.square.length; i++) {
             if(board.square[i] == 0) {
                 continue;
             }
             score += getMaterialScore(board.square[i]); //TODO should there be any weights
-            score += getPositionScore(board.square[i], i);
+            score += getPositionScore(board.square[i], i, gameStage);
         }
         return score;
     }
@@ -100,7 +101,7 @@ public class Evaluator {
         return moveGenerator.getValidMoves(pos, board).size() * (board.square[pos] > 0 ? 1 : -1);
     }
 
-    private int getPositionScore(int piece, int pos) {
+    private int getPositionScore(int piece, int pos, int gameStage) {
         if(piece == PAWN) {
             return EvaluatorHelper.WHITE_PAWN_TABLE[pos];
         }
@@ -131,11 +132,15 @@ public class Evaluator {
         else if(piece == -QUEEN) {
             return -EvaluatorHelper.BLACK_QUEEN_TABLE[pos];
         }
-        else if(piece == KING) {
-            return EvaluatorHelper.WHITE_KING_TABLE_MIDDLE[pos]; //TODO: change it dependding on the game state middle/ending
+        else if(piece == KING && gameStage < 2) {
+            return gameStage < 2
+                    ? EvaluatorHelper.WHITE_KING_TABLE_MIDDLE[pos]
+                    : EvaluatorHelper.WHITE_KING_TABLE_END[pos]; //TODO: change it dependding on the game state middle/ending
         }
-        else if(piece == -KING) {
-            return -EvaluatorHelper.BLACK_KING_TABLE_MIDDLE[pos];
+        else if(piece == -KING && gameStage < 2) {
+            return gameStage < 2
+                    ? -EvaluatorHelper.BLACK_KING_TABLE_MIDDLE[pos]
+                    : -EvaluatorHelper.BLACK_KING_TABLE_END[pos];
         }
         return 0;
     }
