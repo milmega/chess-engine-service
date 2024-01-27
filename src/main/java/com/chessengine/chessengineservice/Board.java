@@ -12,6 +12,7 @@ public class Board {
     private final int GAME_END = 2;
     private final Stack<MoveDetails> moveDetailsStack;
     private final MoveGenerator moveGenerator;
+    private final Bitboard bitboard;
     private int[] numberOfPieces;
     public int[] square;
     private int whiteKingPosition;
@@ -27,18 +28,9 @@ public class Board {
     public Board() {
         moveGenerator = new MoveGenerator();
         moveDetailsStack = new Stack<>();
-        whiteKingPosition = 60;
-        blackKingPosition = 4;
-        whiteCastling = new boolean[] {false, false, false};
-        blackCastling = new boolean[] {false, false, false};
-        lastMove = new Move(-1, -1);
-        captures = 0;
-        moveCount = 0;
-        gameStage = GAME_START;
-        numberOfPieces = new int[] {7, 8, 7, 8}; // white not pawns, white pawns, black not pawns, black pawns
-        initializeBoard();
+        bitboard = new Bitboard();
+        resetBoard();
     }
-
     /*
     * {
                 -4, -2, -3, -5, -6, -3, -2, -4,
@@ -65,6 +57,7 @@ public class Board {
 
     public void resetBoard() {
         initializeBoard();
+        bitboard.initialize();
         moveDetailsStack.clear();
         whiteKingPosition = 60;
         blackKingPosition = 4;
@@ -81,13 +74,17 @@ public class Board {
     public void makeMove(Move move, boolean unmakeMove) {
         int start = move.currentSquare;
         int target = move.targetSquare;
-        MoveDetails md = new MoveDetails(square[target], getKingPosition(1), getKingPosition(-1), getCastling(1), getCastling(-1));
+        int piece = square[start];
+        int targetPiece = square[target];
+        int deltaY = abs(target%8 - start%8); // number of squares moved in Y coordinates
+        MoveDetails md = createMoveDetails(move);
         Pair<Integer, Integer> rookMove = new Pair<>(-1, -1);
 
-        if (square[start] == KING) { // white castling
+        if (piece == KING) { // white castling
             setKingPosition(1, target);
             setCastling(1, new boolean[] {true, true, true});
-            if (abs(target%8 - start%8) > 1) { // if king is doing castling, move rook accordingly
+            md.castlingFlag = true;
+            if (deltaY > 1) { // if king is doing castling, move rook accordingly
                 if (target == 58) {
                     rookMove = new Pair<>(56, 59);
                     movePiece(56, 59, 0);
@@ -96,10 +93,11 @@ public class Board {
                     movePiece(63, 61, 0);
                 }
             }
-        } else if (square[start] == -KING) { // black castling
+        } else if (piece == -KING) { // black castling
             setKingPosition(-1, target);
             setCastling(-1, new boolean[] {true, true, true});
-            if (abs(target%8 - start%8) > 1) { // if king is doing castling, move rook accordingly
+            md.castlingFlag = true;
+            if (deltaY > 1) { // if king is doing castling, move rook accordingly
                 if (target == 2) {
                     rookMove = new Pair<>(0, 3);
                     movePiece(0, 3, 0);
@@ -114,8 +112,18 @@ public class Board {
         // if a rook is captured then disable castling
         disableCastlingIfRookInvolved(target);
 
+        movePiece(start, target, 0);
+        if (md.promotionFlag) {
+            square[target] = QUEEN*md.colour;
+            bitboard.clearSquare(PAWN*md.colour, target);
+            bitboard.setSquare(QUEEN*md.colour, target);
+        } else if (md.enpassantFlag) {
+            square[md.enpassantPosition] = 0;
+            bitboard.clearSquare(-PAWN*md.colour, md.enpassantPosition);
+        }
+
         if (unmakeMove) {
-            md.setRookMove(rookMove);
+            md.rookMove = rookMove;
             moveDetailsStack.push(md);
         } else {
             lastMove = move.getCopy();
@@ -125,44 +133,39 @@ public class Board {
                 if (captures == 3) { //TODO: is it good value?
                     gameStage = GAME_MIDDLE;
                 }
-                if(square[target] > 0) {
-                    numberOfPieces[square[target] > 1 ? 0 : 1]--;
+                if(targetPiece > 0) {
+                    numberOfPieces[targetPiece > 1 ? 0 : 1]--;
                 } else {
-                    numberOfPieces[square[target] < -1 ? 2 : 3]--;
+                    numberOfPieces[targetPiece < -1 ? 2 : 3]--;
                 }
                 if(numberOfPieces[0] < 4 || numberOfPieces[2] < 4) {
                     gameStage = GAME_END;
                 }
             }
         }
-        movePiece(start, target, 0);
     }
 
     public void unmakeMove(Move move) {
         int start = move.targetSquare;
         int target = move.currentSquare;
-        MoveDetails moveDetails = moveDetailsStack.pop();
-        movePiece(start, target, moveDetails.getTargetPiece());
-        setKingPosition(1, moveDetails.getWhiteKingPosition());
-        setKingPosition(-1, moveDetails.getBlackKingPosition());
-        setCastling(1, moveDetails.getWhiteCastling());
-        setCastling(-1, moveDetails.getBlackCastling());
-        Pair<Integer, Integer> rookMove = moveDetails.getRookMove();
-        if (rookMove.first != -1) {
+        MoveDetails md = moveDetailsStack.pop();
+        setKingPosition(1, md.whiteKingPosition);
+        setKingPosition(-1, md.blackKingPosition);
+        setCastling(1, md.whiteCastling);
+        setCastling(-1, md.blackCastling);
+        Pair<Integer, Integer> rookMove = md.rookMove;
+        if (md.castlingFlag) {
             movePiece(rookMove.second, rookMove.first, 0);
         }
-    }
+        movePiece(start, target, md.targetPiece);
 
-    public void parseBoard(String boardCode) {
-        int index = 0;
-        for (int i = 0; i < boardCode.length(); i++) {
-            String character = boardCode.substring(i, i+1);
-            if(character.equals("-")) {
-                i++;
-                character = character.concat(boardCode.substring(i, i+1));
-            }
-            square[index] = Integer.parseInt(character);
-            index++;
+        if (md.promotionFlag) {
+            square[target] = PAWN*md.colour;
+            bitboard.clearSquare(QUEEN*md.colour, target);
+            bitboard.setSquare(PAWN*md.colour, target);
+        } else if (md.enpassantFlag) {
+            square[md.enpassantPosition] = -PAWN*md.colour;
+            bitboard.setSquare(-PAWN*md.colour, md.enpassantPosition);
         }
     }
 
@@ -173,8 +176,7 @@ public class Board {
             if (square[i] == 0 || isSameColour(colour, square[i])) {
                 continue;
             }
-            List<Pair<Integer, Integer>> moves = moveGenerator.getMoves(i, this);
-            List<Move> attackMoves = moveGenerator.getAttackMoves(i, moves, this);
+            List<Move> attackMoves = moveGenerator.getAttackMoves(i, this);
             if (attackMoves.stream().anyMatch(move -> kingPosition == move.targetSquare)) {
                 return true;
             }
@@ -238,16 +240,37 @@ public class Board {
         }
     }
 
+    private MoveDetails createMoveDetails(Move move) {
+        MoveDetails md = new MoveDetails();
+        md.colour = move.colour;
+        md.targetPiece = square[move.targetSquare];
+        md.whiteKingPosition = whiteKingPosition;
+        md.blackKingPosition = blackKingPosition;
+        md.whiteCastling = whiteCastling;
+        md.blackCastling = blackCastling;
+        md.rookMove = new Pair<>(-1, -1);
+        int positionDelta = abs(move.targetSquare - move.currentSquare);
+        if (abs(square[move.currentSquare]) == PAWN) {
+            if (move.targetSquare < 8 || move.targetSquare > 55) {
+                md.promotionFlag = true;
+            }
+            else if(positionDelta == 7 || positionDelta == 9) { //if diagonal move
+                md.enpassantFlag = true;
+                md.enpassantPosition = move.currentSquare + move.changeY;
+            }
+        }
+        return md;
+    }
+
     // moves a piece from start to target square. TargetPiece is a piece that was on a target square (needed for unmaking a move)
     private void movePiece(int start, int target, int targetPiece) {
         int piece = square[start];
-        int colour = piece > 0 ? 1 : -1;
-        if (abs(piece) == PAWN && (target < 8 || target > 55)) {
-            square[target] = QUEEN*colour;
-        } else {
-            square[target] = piece;
-        }
+        square[target] = piece;
         square[start] = targetPiece;
+        bitboard.toggleSquares(piece, start, target);
+        if(targetPiece != 0) {
+            bitboard.toggleSquare(targetPiece, start);
+        }
     }
 
     public int getGameStage() {

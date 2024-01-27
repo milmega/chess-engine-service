@@ -34,9 +34,9 @@ public class MoveGenerator {
         List<Pair<Integer, Integer>> moves = getMoves(pos, board);
         List<Pair<Integer, Integer>> validMoves = new ArrayList<>(moves.stream().filter(move -> {
             int newPos = pos+move.first*8+move.second;
-            board.makeMove(new Move(pos, newPos), true);
+            board.makeMove(new Move(pos, newPos, colour), true);
             boolean isKingUnderCheck = board.isInCheck(colour);
-            board.unmakeMove(new Move(pos, newPos));
+            board.unmakeMove(new Move(pos, newPos, colour));
             return !isKingUnderCheck;
         }).toList());
 
