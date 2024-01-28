@@ -10,6 +10,8 @@ import static java.lang.Math.abs;
 //TODO: implement move ordering
 //TODO: implement opening tree
 //TODO: implement endgaame
+//TODO implement transposition table - convert board to unique fen key
+//TODO: refactor Pair to be Moves and use move flags
 
 public class MoveGenerator {
     public List<Move> generateAllMoves(int colour, Board board) {
@@ -21,7 +23,7 @@ public class MoveGenerator {
             List<Pair<Integer, Integer>> validMoves = getValidMoves(i, board);
             int finalI = i;
             validMoves.forEach(move -> {
-                allMoves.add(new Move(finalI, finalI+move.first*8+move.second));
+                allMoves.add(new Move(finalI, finalI+move.first*8+move.second, colour));
             });
         }
         return allMoves;
@@ -48,7 +50,7 @@ public class MoveGenerator {
         return validMoves;
     }
 
-    public List<Pair<Integer, Integer>> getMoves(int pos, Board board) {
+    private List<Pair<Integer, Integer>> getMoves(int pos, Board board) {
         int piece = board.square[pos];
         int colour = piece > 0 ? 1 : -1;
         int x = pos/8;
@@ -97,11 +99,12 @@ public class MoveGenerator {
     }
 
     //returns list of attack moves for a figure to show a circle around potential prey or a list of all squares under attack that king cannot go to
-    public List<Move> getAttackMoves(int pos, List<Pair<Integer, Integer>> possibleMoves, Board board) {
+    public List<Move> getAttackMoves(int pos, Board board) {
         int colour = board.square[pos] > 0 ? 1 : -1;
-        return possibleMoves.stream()
+        List<Pair<Integer, Integer>> moves = getMoves(pos, board); // I don't need to call getValidMoves because it only checks if opposite king is in check
+        return moves.stream()
                 .filter(move -> board.square[pos+move.first*8+move.second] != 0 && !isSameColour(board.square[pos+move.first*8+move.second], colour))
-                .map(move -> new Move(pos, pos + move.first*8 + move.second)).toList();
+                .map(move -> new Move(pos, pos + move.first*8 + move.second, colour)).toList();
     }
 
     public List<Pair<Integer, Integer>> getMovesForPiece(int colour, int pos, Board board) {

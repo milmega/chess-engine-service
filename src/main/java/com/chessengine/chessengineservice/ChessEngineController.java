@@ -13,7 +13,7 @@ public class ChessEngineController {
                               @RequestParam int destination,
                               @RequestParam int colour) {
         if(start > -1) { // if computer is white, start and destination are -1
-            chessEngineService.getBoard().makeMove(new Move(start, destination), false);
+            chessEngineService.getBoard().makeMove(new Move(start, destination, -colour), false);
         }
         return chessEngineService.GetNextMoveAsString(colour);
     }

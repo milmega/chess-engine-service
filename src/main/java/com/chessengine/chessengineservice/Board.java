@@ -1,5 +1,6 @@
 package com.chessengine.chessengineservice;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Stack;
 
@@ -22,7 +23,10 @@ public class Board {
     private Move lastMove;
     private int captures;
     private int gameStage;
-    private int moveCount;
+    private List<Move> moveHistory;
+    private int fullMoveCount;
+    private int halfMoveCount;
+    private int movesSinceCaptureOrPawnMove;
 
 
     public Board() {
@@ -63,9 +67,11 @@ public class Board {
         blackKingPosition = 4;
         whiteCastling = new boolean[] {false, false, false};
         blackCastling = new boolean[] {false, false, false};
-        lastMove = new Move(-1, -1);
+        lastMove = new Move(-1, -1, 0);
         captures = 0;
-        moveCount = 0;
+        moveHistory = new ArrayList<>();
+        fullMoveCount = 1;
+        halfMoveCount = 0;
         gameStage = GAME_START;
         numberOfPieces = new int[] {7, 8, 7, 8}; // white not pawns, white pawns, black not pawns, black pawns
     }
@@ -126,10 +132,18 @@ public class Board {
             md.rookMove = rookMove;
             moveDetailsStack.push(md);
         } else {
+            moveHistory.add(move); // does not have all neccessary info
             lastMove = move.getCopy();
-            moveCount++;
-            if (square[target] != 0) {
+            halfMoveCount++;
+            if(move.colour == -1) {
+                fullMoveCount++;
+            }
+            if(abs(piece) == PAWN) {
+                halfMoveCount = 0;
+            }
+            if (targetPiece != 0) {
                 captures++;
+                halfMoveCount = 0;
                 if (captures == 3) { //TODO: is it good value?
                     gameStage = GAME_MIDDLE;
                 }
@@ -281,5 +295,13 @@ public class Board {
 
     public void setGameStage(int newGameStage) {
         gameStage = newGameStage;
+    }
+
+    public int getFullMoveCount() {
+        return fullMoveCount;
+    }
+
+    public int getHalfMoveCount() {
+        return halfMoveCount;
     }
 }
