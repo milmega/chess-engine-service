@@ -5,6 +5,7 @@ import static java.lang.Math.abs;
 public class Bitboard {
 
     public long[][] pieces;
+    public long allPieces;
     public long emptySquares;
     public long emptyOrWhiteSquares;
     public long emptyOrBlackSquares;
@@ -34,9 +35,10 @@ public class Bitboard {
         pieces[1][4] = 0x81L << 56; // black rooks
         pieces[1][5] = 0x1L << 60; // black queen
         pieces[1][6] = 0x8L << 56; // black king
-        emptySquares = 0xFFFFFFFFL << 4;
-        emptyOrWhiteSquares = 0xFFFFFFFFFFFFL;
-        emptyOrBlackSquares = 0xFFFFFFFFFFFFL << 4;
+        allPieces = pieces[0][0] | pieces[1][0];
+        emptySquares = ~allPieces;
+        emptyOrWhiteSquares = ~pieces[1][0];
+        emptyOrBlackSquares = ~pieces[0][0];
     }
 
     public void setSquare(int piece, int index) {
@@ -76,6 +78,13 @@ public class Bitboard {
             return ((pieces[0][1] << 9) & notLastColumn) | ((pieces[0][1] << 7) & notFirstColumn);
         }
         return ((pieces[1][1] >> 9) & notFirstColumn) | ((pieces[1][1] >> 7) & notLastColumn);
+    }
+
+    public void update() {
+        allPieces = pieces[0][0] | pieces[1][0];
+        emptySquares = ~allPieces;
+        emptyOrWhiteSquares = ~pieces[1][0];
+        emptyOrBlackSquares = ~pieces[0][0];
     }
 
     void printHexAsGrid(long hexVal) {
