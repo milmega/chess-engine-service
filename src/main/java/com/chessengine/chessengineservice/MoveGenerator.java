@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+import static com.chessengine.chessengineservice.Helpers.BoardHelper.*;
 import static com.chessengine.chessengineservice.Piece.*;
 import static java.lang.Math.abs;
 
@@ -23,7 +24,7 @@ public class MoveGenerator {
             List<Pair<Integer, Integer>> validMoves = getValidMoves(i, board);
             int finalI = i;
             validMoves.forEach(move -> {
-                allMoves.add(new Move(finalI, finalI+move.first*8+move.second, colour));
+                allMoves.add(new Move(finalI, finalI+coorsToPos(move.first, move.second), colour));
             });
         }
         return allMoves;
@@ -35,7 +36,7 @@ public class MoveGenerator {
         int colour = piece > 0 ? 1 : -1;
         List<Pair<Integer, Integer>> moves = getMoves(pos, board);
         List<Pair<Integer, Integer>> validMoves = new ArrayList<>(moves.stream().filter(move -> {
-            int newPos = pos+move.first*8+move.second;
+            int newPos = pos+coorsToPos(move.first, move.second);
             board.makeMove(new Move(pos, newPos, colour), true);
             boolean isKingUnderCheck = board.isInCheck(colour);
             board.unmakeMove(new Move(pos, newPos, colour));
@@ -53,8 +54,8 @@ public class MoveGenerator {
     private List<Pair<Integer, Integer>> getMoves(int pos, Board board) {
         int piece = board.square[pos];
         int colour = piece > 0 ? 1 : -1;
-        int x = pos/8;
-        int y = pos%8;
+        int x = posToX(pos);
+        int y = posToX(pos);
         List<Pair<Integer, Integer>> movesForFigure = getMovesForPiece(colour, pos, board);
         Move lastMove = board.getLastMove();
         int lastMovePiece = lastMove.currentSquare == -1 ? 0 : board.square[lastMove.targetSquare];
@@ -73,7 +74,7 @@ public class MoveGenerator {
                 if (newX < 0 || newX > 7 || newY < 0 || newY > 7) {
                     return false;
                 }
-                return !isSameColour(board.square[newX*8+newY], piece); //ignore if both are the same colour
+                return !isSameColour(board.square[coorsToPos(newX, newY)], piece); //ignore if both are the same colour
             }).toList();
         }
         List<Pair<Integer, Integer>> allMovesForPiece = new ArrayList<>();
@@ -103,41 +104,42 @@ public class MoveGenerator {
         int colour = board.square[pos] > 0 ? 1 : -1;
         List<Pair<Integer, Integer>> moves = getMoves(pos, board); // I don't need to call getValidMoves because it only checks if opposite king is in check
         return moves.stream()
-                .filter(move -> board.square[pos+move.first*8+move.second] != 0 && !isSameColour(board.square[pos+move.first*8+move.second], colour))
+                .filter(move -> board.square[pos+coorsToPos(move.first, move.second)] != 0 &&
+                        !isSameColour(board.square[pos+coorsToPos(move.first, move.second)], colour))
                 .map(move -> new Move(pos, pos + move.first*8 + move.second, colour)).toList();
     }
 
     public List<Pair<Integer, Integer>> getMovesForPiece(int colour, int pos, Board board) {
         List<Pair<Integer, Integer>> pieceMoves = new ArrayList<>();
         int piece = abs(board.square[pos]);
-        int x = pos / 8;
-        int y = pos % 8;
+        int x = posToX(pos);
+        int y = posToX(pos);
         if (piece == PAWN) {
             List<Pair<Integer, Integer>> pawnMoves = new ArrayList<>();
             if(colour > 0) {
-                if (x > 0 && board.square[(x-1)*8+y] == 0){
+                if (x > 0 && board.square[coorsToPos(x-1, y)] == 0){
                     pawnMoves.add(new Pair<>(-1, 0));
                 }
                 if (x == 6 && board.square[40+y] == 0 && board.square[32+y] == 0) {
                     pawnMoves.add(new Pair<>(-2, 0));
                 }
-                if (x > 0 && y > 0 && board.square[(x-1)*8+(y-1)] < 0) { //value smaller than 0 it's black
+                if (x > 0 && y > 0 && board.square[coorsToPos(x-1, y-1)] < 0) { //value smaller than 0 it's black
                     pawnMoves.add(new Pair<>(-1, -1));
                 }
-                if (x > 0 && y < 7 && board.square[(x-1)*8+(y+1)] < 0) { //value smaller than 0 it's black
+                if (x > 0 && y < 7 && board.square[coorsToPos(x-1, y+1)] < 0) { //value smaller than 0 it's black
                     pawnMoves.add(new Pair<>(-1, 1));
                 }
             } else {
-                if (x < 7 && board.square[(x+1)*8+y] == 0){
+                if (x < 7 && board.square[coorsToPos(x+1, y)] == 0){
                     pawnMoves.add(new Pair<>(1, 0));
                 }
                 if (x == 1 && board.square[16+y] == 0 && board.square[24+y] == 0) {
                     pawnMoves.add(new Pair<>(2, 0));
                 }
-                if (x < 7 && y > 0 && board.square[(x+1)*8+(y-1)] > 0) { //value bigger than 0 it's white
+                if (x < 7 && y > 0 && board.square[coorsToPos(x+1, y-1)] > 0) { //value bigger than 0 it's white
                     pawnMoves.add(new Pair<>(1, -1));
                 }
-                if (x < 7 && y < 7 && board.square[(x+1)*8+(y+1)] > 0) { //value bigger than 0 it's white
+                if (x < 7 && y < 7 && board.square[coorsToPos(x+1, y+1)] > 0) { //value bigger than 0 it's white
                     pawnMoves.add(new Pair<>(1, 1));
                 }
             }
@@ -194,9 +196,9 @@ public class MoveGenerator {
     }
 
     private Pair<Integer, Integer> getEnpassantMove(int piece, int x, int y, Move lastMove) {
-        int lastMoveFromX = lastMove.currentSquare/8;
-        int lastMoveToX = lastMove.targetSquare/8;
-        int lastMoveToY = lastMove.targetSquare%8;
+        int lastMoveFromX = posToX(lastMove.currentSquare);
+        int lastMoveToX = posToX(lastMove.targetSquare);
+        int lastMoveToY = posToX(lastMove.targetSquare);
 
         if (Math.abs(lastMoveFromX - lastMoveToX) > 1 && x == lastMoveToX && Math.abs(y - lastMoveToY) == 1) {
             return new Pair<>(piece > 0 ? -1 : 1, lastMoveToY-y);
@@ -220,21 +222,17 @@ public class MoveGenerator {
                 continue;
             }
             List<Pair<Integer, Integer>> moves = getMoves(i, board);
-            int finalI = i/8;
-            int finalJ = i%8;
+            int finalI = posToX(i);
+            int finalJ = posToY(i);
             leftCastlingEnabled = moves.stream().noneMatch(move -> move.first + finalI  == row && move.second + finalJ < 5); //TODO: change the evaluation
             rightCastlingEnabled = moves.stream().noneMatch(move -> move.first + finalI == row && move.second + finalJ > 3);
         }
-        if (!castling[1] && leftCastlingEnabled && board.square[row*8+1] == 0 && board.square[row*8+2] == 0 && board.square[row*8+3] == 0) { //if left rook hasn't moved
+        if (!castling[1] && leftCastlingEnabled && board.square[coorsToPos(row, 1)] == 0 && board.square[coorsToPos(row, 2)] == 0 && board.square[coorsToPos(row,3)] == 0) { //if left rook hasn't moved
             castlingMoves.add(new Pair<>(0, -2));
         }
-        if (!castling[2] && rightCastlingEnabled && board.square[row*8+5] == 0 && board.square[row*8+6] == 0) { //if right rook hasn't moved
+        if (!castling[2] && rightCastlingEnabled && board.square[coorsToPos(row, 5)] == 0 && board.square[coorsToPos(row, 6)] == 0) { //if right rook hasn't moved
             castlingMoves.add(new Pair<>(0, 2));
         }
         return castlingMoves;
-    }
-
-    private boolean isSameColour(int piece1, int piece2) {
-        return (piece1 > 0 && piece2 > 0) || (piece1 < 0 && piece2 < 0);
     }
 }
