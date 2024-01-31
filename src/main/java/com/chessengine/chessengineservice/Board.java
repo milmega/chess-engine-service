@@ -157,7 +157,7 @@ public class Board {
                 }
             }
         }
-        bitboard.update();
+        bitboard.updateBitboards();
     }
 
     public void unmakeMove(Move move) {
@@ -182,7 +182,7 @@ public class Board {
             square[md.enpassantPosition] = -PAWN*md.colour;
             bitboard.setSquare(-PAWN*md.colour, md.enpassantPosition);
         }
-        bitboard.update();
+        bitboard.updateBitboards();
     }
 
     //checks if king is under check

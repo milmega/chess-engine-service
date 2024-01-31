@@ -13,10 +13,14 @@ public class Bitboard {
     public final long notLastColumn = ~lastColumn;
     public final long firstColumn = lastColumn << 7;
     public final long notFirstColumn = ~firstColumn;
+    public long[] orthogonalSlider = {0, 0}; // map of rooks and queens
+    public long[] diagonalSlider = {0, 0}; // map of bishops and queens
+    MagicBitboard magicBitboard;
 
 
     public Bitboard() {
         initialize();
+        magicBitboard = new MagicBitboard();
     }
 
     public void initialize() {
@@ -35,10 +39,30 @@ public class Bitboard {
         pieces[1][4] = 0x81L << 56; // black rooks
         pieces[1][5] = 0x1L << 60; // black queen
         pieces[1][6] = 0x8L << 56; // black king
+        updateBitboards();
+    }
+
+    public void updateBitboards() {
         allPieces = pieces[0][0] | pieces[1][0];
         emptySquares = ~allPieces;
         emptyOrWhiteSquares = ~pieces[1][0];
         emptyOrBlackSquares = ~pieces[0][0];
+        orthogonalSlider[0] = pieces[0][4] | pieces[0][5];
+        orthogonalSlider[1] = pieces[1][4] | pieces[1][5];
+        diagonalSlider[0] = pieces[0][3] | pieces[0][5];
+        diagonalSlider[1] = pieces[1][3] | pieces[1][5];
+    }
+
+    public static long setBit(long board, int index) {
+        return board | 0x1L << index;
+    }
+
+    public static boolean isBitSet(long board, int index) {
+        return ((board >> index) & 1) != 0;
+    }
+
+    public static long clearBit(long board, int index) {
+        return board & ~(0x1L << index);
     }
 
     public void setSquare(int piece, int index) {
@@ -69,6 +93,13 @@ public class Bitboard {
         pieces[colourIndex][0] ^= mask;
     }
 
+    // Retrieve index of least significant set bit in a 64bit value. Sets the bit to zero.
+    public Pair<Integer, Long> popLeastSignificantBit(long board) {
+        int i = Long.numberOfTrailingZeros(board);
+        board &= (board - 1);
+        return new Pair<>(i, board);
+    }
+
     public boolean occupiesSquare(int piece, int index) {
         return ((pieces[piece > 0 ? 0 : 1][abs(piece)] >> (63 - index)) & 1) != 0;
     }
@@ -80,16 +111,34 @@ public class Bitboard {
         return ((pieces[1][1] >> 9) & notFirstColumn) | ((pieces[1][1] >> 7) & notLastColumn);
     }
 
-    public void update() {
-        allPieces = pieces[0][0] | pieces[1][0];
-        emptySquares = ~allPieces;
-        emptyOrWhiteSquares = ~pieces[1][0];
-        emptyOrBlackSquares = ~pieces[0][0];
+    //return a map with bits on position where 'colour' can be attacked
+    public long getAttackData(int colour) {
+        long attackMap = getSlidingAttackMap(colour);
+        return attackMap;
     }
 
-    void printHexAsGrid(long hexVal) {
+    private long getSlidingAttackMap(int colour) {
+        int index = colour > 0 ? 1 : 0;
+        long attackMap = 0;
+        attackMap |= updateAttackMap(colour, diagonalSlider[index], true); //enemy sliders
+        attackMap |= updateAttackMap(colour, orthogonalSlider[index], false); //enemy sliders
+        return attackMap;
+    }
+
+    private long updateAttackMap(int colour, long board, boolean diagonal) {
+        long blockers = allPieces & ~(pieces[1-colour][6]); //friendly king
+        long moveBoard = 0;
+        while(board != 0) {
+            Pair<Integer, Long> bitAndBoard = popLeastSignificantBit(board);
+            int startSquare = bitAndBoard.first;
+            board = bitAndBoard.second;
+            moveBoard |= magicBitboard.getSliderAttacks(startSquare, blockers, diagonal);
+        }
+        return moveBoard;
+    }
+
+    public static void printHexAsGrid(long hexVal) {
         String bin = String.format("%64s", Long.toBinaryString(hexVal)).replace(' ', '0');
-        //String bin = Long.toBinaryString(hexVal);
         for(int i = 0; i < bin.length(); i++) {
             if(i > 0 && i % 8 == 0) {
                 System.out.println();
