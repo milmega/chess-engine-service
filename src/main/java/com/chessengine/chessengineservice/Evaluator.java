@@ -2,6 +2,7 @@ package com.chessengine.chessengineservice;
 
 import com.chessengine.chessengineservice.Helpers.EvaluatorHelper;
 import com.chessengine.chessengineservice.Helpers.FenHelper;
+import com.chessengine.chessengineservice.MoveGenerator.MoveGenerator;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -30,7 +31,7 @@ public class Evaluator {
         //check if current board has been already evaluated
         String fenCode = fenHelper.ConvertBoardToFenCode(board);
         List<Move> movesFromCache = moveCache.getOrDefault(fenCode, new ArrayList<>()); //TODO: is this map not gonna be too big?
-        if(!movesFromCache.isEmpty()) { //TODO: dont do it randomly
+        if (!movesFromCache.isEmpty()) { //TODO: dont do it randomly
             return movesFromCache.get(ThreadLocalRandom.current().nextInt(0, movesFromCache.size()));
         }
 
@@ -39,13 +40,13 @@ public class Evaluator {
         List<Move> bestMoves = new ArrayList<>();
         int bestScore = MIN_VALUE;
 
-        for(Move move : allMoves) {
+        for (Move move : allMoves) {
             board.makeMove(move, true);
 
             int score = -negamax(-colour, board, EVALUATION_DEPTH, 0, MIN_VALUE, MAX_VALUE);
             System.out.println("From " + move.currentSquare/8 + ", " + move.currentSquare%8 + " to " + move.targetSquare/8 + ", " + move.targetSquare%8 + " - " + score);
 
-            if(score == bestScore) {
+            if (score == bestScore) {
                 bestMoves.add(move);
             } else if (score > bestScore) {
                 bestMoves.clear();
@@ -55,7 +56,7 @@ public class Evaluator {
             board.unmakeMove(move);
         }
 
-        if(bestMoves.isEmpty()) {
+        if (bestMoves.isEmpty()) {
             return null;
         }
         moveCache.put(fenCode, bestMoves);
@@ -85,7 +86,7 @@ public class Evaluator {
 
             // Move was *too* good, opponent will choose a different move earlier on to avoid this position.
             // (Beta-cutoff / Fail high)
-            if(score >= beta) {
+            if (score >= beta) {
                 return beta;
             }
             alpha = Math.max(alpha, score);
@@ -96,7 +97,7 @@ public class Evaluator {
     // Search capture moves until a 'quiet' position is reached.
     private int quiescenceNegamax(int colour, Board board, int alpha, int beta) {
         int evaluation = evaluateBoard(colour, board);
-        if(evaluation >= beta) {
+        if (evaluation >= beta) {
             return beta;
         }
         alpha = Math.max(alpha, evaluation);
@@ -106,7 +107,7 @@ public class Evaluator {
             int score = -quiescenceNegamax(-colour, board, -beta, -alpha);
             board.unmakeMove(move);
 
-            if(score >= beta) {
+            if (score >= beta) {
                 return beta;
             }
             alpha = Math.max(alpha, score);
@@ -119,7 +120,7 @@ public class Evaluator {
         int score = 0;
         int gameStage = board.getGameStage();
         for (int i = 0; i < board.square.length; i++) {
-            if(board.square[i] == 0) {
+            if (board.square[i] == 0) {
                 continue;
             }
             score += getMaterialScore(board.square[i]); //TODO should there be any weights
@@ -138,42 +139,42 @@ public class Evaluator {
     }
 
     private int getPositionScore(int piece, int pos, int gameStage) {
-        if(piece == PAWN) {
+        if (piece == PAWN) {
             return EvaluatorHelper.WHITE_PAWN_TABLE[pos];
         }
-        else if(piece == -PAWN) {
+        else if (piece == -PAWN) {
             return -EvaluatorHelper.BLACK_PAWN_TABLE[pos];
         }
-        else if(piece == KNIGHT) {
+        else if (piece == KNIGHT) {
             return EvaluatorHelper.WHITE_KNIGHT_TABLE[pos];
         }
-        else if(piece == -KNIGHT) {
+        else if (piece == -KNIGHT) {
             return -EvaluatorHelper.BLACK_KNIGHT_TABLE[pos];
         }
-        else if(piece == BISHOP) {
+        else if (piece == BISHOP) {
             return EvaluatorHelper.WHITE_BISHOP_TABLE[pos];
         }
-        else if(piece == -BISHOP) {
+        else if (piece == -BISHOP) {
             return -EvaluatorHelper.BLACK_BISHOP_TABLE[pos];
         }
-        else if(piece == ROOK) {
+        else if (piece == ROOK) {
             return EvaluatorHelper.WHITE_ROOK_TABLE[pos];
         }
-        else if(piece == -ROOK) {
+        else if (piece == -ROOK) {
             return -EvaluatorHelper.BLACK_ROOK_TABLE[pos];
         }
-        else if(piece == QUEEN) {
+        else if (piece == QUEEN) {
             return EvaluatorHelper.WHITE_QUEEN_TABLE[pos];
         }
-        else if(piece == -QUEEN) {
+        else if (piece == -QUEEN) {
             return -EvaluatorHelper.BLACK_QUEEN_TABLE[pos];
         }
-        else if(piece == KING && gameStage < 2) {
+        else if (piece == KING && gameStage < 2) {
             return gameStage < 2
                     ? EvaluatorHelper.WHITE_KING_TABLE_MIDDLE[pos]
                     : EvaluatorHelper.WHITE_KING_TABLE_END[pos]; //TODO: change it dependding on the game state middle/ending
         }
-        else if(piece == -KING && gameStage < 2) {
+        else if (piece == -KING && gameStage < 2) {
             return gameStage < 2 //TODO: update gameStage to endgame
                     ? -EvaluatorHelper.BLACK_KING_TABLE_MIDDLE[pos]
                     : -EvaluatorHelper.BLACK_KING_TABLE_END[pos];

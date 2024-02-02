@@ -47,11 +47,11 @@ public class MagicBitboard {
     }
 
     private void computeMasks() {
-        for(int i = 0; i < 64; i++) {
+        for (int i = 0; i < 64; i++) {
             bishopMask[i] = calculateMovementMask(i, true);
             rookMask[i] = calculateMovementMask(i, false);
         }
-        for(int i = 0; i < 64; i++) {
+        for (int i = 0; i < 64; i++) {
             bishopAttacks[i] = calculateAttacks(i, true, bishopMagic[i], bishopShift[i]);
             rookAttacks[i] = calculateAttacks(i, false, rookMagic[i], rookShift[i]);
         }
@@ -63,14 +63,14 @@ public class MagicBitboard {
         int x = posToX(square);
         int y = posToY(square);
 
-        for(Pair<Integer, Integer> move : movement) {
-            for(int i = 1; i < 8; i++) {
+        for (Pair<Integer, Integer> move : movement) {
+            for (int i = 1; i < 8; i++) {
                 int newX = x + move.first * i;
                 int newY = y + move.second * i;
                 int nextX = x + move.first * (i + 1);
                 int nextY = y + move.second * (i + 1);
 
-                if(areCoorsValid(nextX, nextY)) {
+                if (areCoorsValid(nextX, nextY)) {
                     mask = setBit(mask, coorsToPos(newX, newY));
                 } else {
                     break;
@@ -130,16 +130,16 @@ public class MagicBitboard {
         int x = posToX(startSquare);
         int y = posToY(startSquare);
 
-        for(Pair<Integer, Integer> move : movement)
+        for (Pair<Integer, Integer> move : movement)
         {
-            for(int i = 1; i < 8; i++) {
+            for (int i = 1; i < 8; i++) {
                 int newX = x + move.first * i;
                 int newY = y + move.second * i;
                 int newPos = coorsToPos(newX, newY);
 
-                if(areCoorsValid(newX, newY)) {
+                if (areCoorsValid(newX, newY)) {
                     bitboard = setBit(bitboard, newPos);
-                    if(isBitSet(blockerBitboard, newPos)) {
+                    if (isBitSet(blockerBitboard, newPos)) {
                         break;
                     }
                 } else {

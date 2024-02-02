@@ -135,10 +135,10 @@ public class Board {
             moveHistory.add(move); // does not have all neccessary info
             lastMove = move.getCopy();
             halfMoveCount++;
-            if(move.colour == -1) {
+            if (move.colour == -1) {
                 fullMoveCount++;
             }
-            if(abs(piece) == PAWN) {
+            if (abs(piece) == PAWN) {
                 halfMoveCount = 0;
             }
             if (targetPiece != 0) {
@@ -147,12 +147,12 @@ public class Board {
                 if (captures == 3) { //TODO: is it good value?
                     gameStage = GAME_MIDDLE;
                 }
-                if(targetPiece > 0) {
+                if (targetPiece > 0) {
                     numberOfPieces[targetPiece > 1 ? 0 : 1]--;
                 } else {
                     numberOfPieces[targetPiece < -1 ? 2 : 3]--;
                 }
-                if(numberOfPieces[0] < 4 || numberOfPieces[2] < 4) {
+                if (numberOfPieces[0] < 4 || numberOfPieces[2] < 4) {
                     gameStage = GAME_END;
                 }
             }
@@ -205,7 +205,7 @@ public class Board {
     }
 
     public void setKingPosition(int colour, int pos) {
-        if(colour > 0) {
+        if (colour > 0) {
             whiteKingPosition = pos;
         } else {
             blackKingPosition = pos;
@@ -217,7 +217,7 @@ public class Board {
     }
 
     public void setCastling(int colour, String castling) {
-        if(colour > 0) {
+        if (colour > 0) {
             whiteCastling[0] = castling.charAt(0) == '1';
             whiteCastling[1] = castling.charAt(1) == '1';
             whiteCastling[2] = castling.charAt(2) == '1';
@@ -270,7 +270,7 @@ public class Board {
             if (move.targetSquare < 8 || move.targetSquare > 55) {
                 md.promotionFlag = true;
             }
-            else if(positionDelta == 7 || positionDelta == 9) { //if diagonal move
+            else if (positionDelta == 7 || positionDelta == 9) { //if diagonal move
                 md.enpassantFlag = true;
                 md.enpassantPosition = move.currentSquare + move.changeY;
             }
@@ -284,7 +284,7 @@ public class Board {
         square[target] = piece;
         square[start] = targetPiece;
         bitboard.toggleSquares(piece, start, target);
-        if(targetPiece != 0) {
+        if (targetPiece != 0) {
             bitboard.toggleSquare(targetPiece, start);
         }
     }

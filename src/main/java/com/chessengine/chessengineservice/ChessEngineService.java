@@ -1,12 +1,10 @@
 package com.chessengine.chessengineservice;
 
 public class ChessEngineService {
-    MoveGenerator moveGenerator;
     Evaluator evaluator;
     Board board;
 
     public ChessEngineService() {
-        moveGenerator = new MoveGenerator();
         board = new Board();
         evaluator = new Evaluator();
     }

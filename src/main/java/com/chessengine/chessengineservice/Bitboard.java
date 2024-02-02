@@ -141,6 +141,8 @@ public class Bitboard {
         String bin = String.format("%64s", Long.toBinaryString(hexVal)).replace(' ', '0');
         for(int i = 0; i < bin.length(); i++) {
             if(i > 0 && i % 8 == 0) {
+        for (int i = 0; i < bin.length(); i++) {
+            if (i > 0 && i % 8 == 0) {
                 System.out.println();
             }
             System.out.print(bin.charAt(i) + " ");
