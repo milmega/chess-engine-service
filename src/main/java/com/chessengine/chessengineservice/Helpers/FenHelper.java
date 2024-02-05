@@ -63,11 +63,11 @@ public class FenHelper {
 
         //possible enpassant move
         Move lastMove = board.getLastMove();
-        if (lastMove.currentSquare != -1 &&
+        if (lastMove.startSquare != -1 &&
                 abs(board.square[lastMove.targetSquare]) == PAWN
-                && abs(lastMove.targetSquare - lastMove.currentSquare) == 16) {
+                && abs(lastMove.targetSquare - lastMove.startSquare) == 16) {
             int colour = board.square[lastMove.targetSquare];
-            int enpassantSquare = lastMove.currentSquare - 8*colour;
+            int enpassantSquare = lastMove.startSquare - 8*colour;
             code.append(convertIntToSquareCode(enpassantSquare));
         } else {
             code.append(" -");
