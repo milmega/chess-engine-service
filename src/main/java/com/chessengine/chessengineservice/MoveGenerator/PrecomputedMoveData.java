@@ -11,44 +11,44 @@ import static java.lang.Math.*;
 
 public class PrecomputedMoveData {
 
-    public static long[][] pathMask;
-    public static long[][] rayPathMask;
+    public static long[][] alignMask;
+    public static long[][] dirRayMask;
 
     //  (N, S, W, E, NW, SE, NE, SW)
-    public static final int[] squareChangeOffset = { 8, -8, -1, 1, 7, -7, 9, -9 };
-    public static final Pair<Integer, Integer>[] squareChangeOffset2D = new Pair[] {
-            new Pair<>(0, 1),
-            new Pair<>(0, -1),
+    public static int[] squareChangeOffset = { -8, 8, -1, 1, -9, 9, -7, 7 };
+    public static Pair<Integer, Integer>[] squareChangeOffset2D = new Pair[] {
             new Pair<>(-1, 0),
             new Pair<>(1, 0),
-            new Pair<>(-1, 1),
-            new Pair<>(1, -1),
+            new Pair<>(0, -1),
+            new Pair<>(0, 1),
+            new Pair<>(-1, -1),
             new Pair<>(1, 1),
-            new Pair<>(-1, -1)
+            new Pair<>(-1, 1),
+            new Pair<>(1, -1)
     };
-    public static final int[] dirLookup; //TODO: is it even needed or used anywhere?
+    public static int[] dirLookup; //TODO: is it even needed or used anywhere?
 
-    public static final int[][] whitePawnAttacks;
-    public static final int[][] blackPawnAttacks;
-    public static final long[] knightAttackBitboard;
-    public static final long[] kingAttackBitboard;
-    public static final long[][] pawnAttackBitboard;
+    public static int[][] whitePawnAttacks;
+    public static int[][] blackPawnAttacks;
+    public static long[] knightAttackBitboard;
+    public static long[] kingAttackBitboard;
+    public static long[][] pawnAttackBitboard;
 
     // keeps number of squares from each position in every direction: N, S, W, E, NW, SE, NE, SW
-    public static final int[][] distFromEdge;
+    public static int[][] distFromEdge;
 
-    public static final long[] rookMoves;
-    public static final long[] bishopMoves;
-    public static final long[] queenMoves;
-    public static final int[][] knightMoves;
-    public static final int[][] kingMoves;
+    public static long[] rookMoves;
+    public static long[] bishopMoves;
+    public static long[] queenMoves;
+    public static int[][] knightMoves;
+    public static int[][] kingMoves;
     // Aka manhattan distance (answers how many moves for a rook to get from square a to square b)
     public static int[][] orthogonalDist;
     // Aka chebyshev distance (answers how many moves for a king to get from square a to square b)
     public static int[][] kingDist;
     public static int[] centreManhattanDist;
 
-    static {
+    public static void precomputeMoveData() {
         distFromEdge = new int[64][];
 
         rookMoves = new long[64];
@@ -57,19 +57,19 @@ public class PrecomputedMoveData {
         knightMoves = new int[64][];
         kingMoves = new int[64][];
 
-        whitePawnAttacks= new int[64][];
+        whitePawnAttacks = new int[64][];
         blackPawnAttacks = new int[64][];
         pawnAttackBitboard = new long[64][];
         knightAttackBitboard = new long[64];
         kingAttackBitboard = new long[64];
 
-        int[] possibleKnightJumps = new int[] { 15, 17, -17, -15, 10, -6, 6, -10 };
+        int[] possibleKnightJumps = new int[]{15, 17, -17, -15, 10, -6, 6, -10};
 
         for (int i = 0; i < 64; i++) {
             int x = posToX(i);
             int y = posToY(i);
             int north = x;
-            int south = 7 - y;
+            int south = 7 - x;
             int west = y;
             int east = 7 - y;
             distFromEdge[i] = new int[8];
@@ -94,7 +94,7 @@ public class PrecomputedMoveData {
                     int maxDistChange = max(abs(x - knightNewX), abs(y - knightNewY));
                     if (maxDistChange == 2) {
                         legalKnightMoves.add(newSquare);
-                        knightBitboard |= 1L << newSquare;
+                        knightBitboard |= 1L << 63 - newSquare;
                     }
                 }
             }
@@ -110,10 +110,9 @@ public class PrecomputedMoveData {
                     int kingNewY = posToY(newSquare);
                     // make sure king moved max 1 square on x or y
                     int maxDistChange = max(abs(x - kingNewX), abs(y - kingNewY));
-                    if (maxDistChange == 1)
-                    {
+                    if (maxDistChange == 1) {
                         legalKingMoves.add(newSquare);
-                        kingAttackBitboard[i] |= 1L << newSquare;
+                        kingAttackBitboard[i] |= 1L << 63 - newSquare;
                     }
                 }
             }
@@ -126,21 +125,21 @@ public class PrecomputedMoveData {
             if (y < 7) {
                 if (x > 0) {
                     whitePawnCaptures.add(i - 7);
-                    pawnAttackBitboard[i][0] |= 1L << (i - 7);
+                    pawnAttackBitboard[i][0] |= 1L << 63 - (i - 7);
                 }
                 if (x < 7) {
                     blackPawnCaptures.add(i + 9);
-                    pawnAttackBitboard[i][1] |= 1L << (i + 9);
+                    pawnAttackBitboard[i][1] |= 1L << 63 - (i + 9);
                 }
             }
             if (y > 0) {
                 if (x > 0) {
                     whitePawnCaptures.add(i - 9);
-                    pawnAttackBitboard[i][0] |= 1L << (i - 9);
+                    pawnAttackBitboard[i][0] |= 1L << 63 - (i - 9);
                 }
                 if (x < 7) {
                     blackPawnCaptures.add(i + 7);
-                    pawnAttackBitboard[i][1] |= 1L << (i + 7);
+                    pawnAttackBitboard[i][1] |= 1L << 63 - (i + 7);
                 }
             }
             whitePawnAttacks[i] = whitePawnCaptures.stream().mapToInt(Integer::intValue).toArray();
@@ -148,22 +147,21 @@ public class PrecomputedMoveData {
 
             // compute rook moves
             for (int j = 0; j < 4; j++) {
-                int squareChange = squareChangeOffset[i];
+                int squareChange = squareChangeOffset[j];
                 for (int g = 0; g < distFromEdge[i][j]; g++) {
                     int newSquare = i + squareChange * (g + 1);
-                    rookMoves[i] |= 1L << newSquare;
+                    rookMoves[i] |= 1L << 63 - newSquare;
                 }
             }
 
             // compute bishop moves
             for (int j = 4; j < 8; j++) {
-                int squareChange = squareChangeOffset[i];
+                int squareChange = squareChangeOffset[j];
                 for (int g = 0; g < distFromEdge[i][j]; g++) {
                     int newSquare = i + squareChange * (g + 1);
-                    bishopMoves[i] |= 1L << newSquare;
+                    bishopMoves[i] |= 1L << 63 - newSquare;
                 }
             }
-
             // compute queen moves
             queenMoves[i] = rookMoves[i] | bishopMoves[i];
         }
@@ -205,7 +203,7 @@ public class PrecomputedMoveData {
         }
 
         // pathMaks represents bitmasks indicating squares aligned in a straight line on a chessboard
-        pathMask = new long[64][64];
+        alignMask = new long[64][64];
         for (int fromSquare = 0; fromSquare < 64; fromSquare++) {
             for (int toSquare = 0; toSquare < 64; toSquare++) {
                 int deltaX = posToX(toSquare) - posToX(fromSquare);
@@ -214,11 +212,11 @@ public class PrecomputedMoveData {
                 int dirY = (int)signum(deltaY);
 
                 for (int i = -8; i < 8; i++) {
-                    int newX = fromSquare + dirX * i;
-                    int newY = fromSquare + dirY * i;
+                    int newX = posToX(fromSquare) + dirX * i;
+                    int newY = posToY(fromSquare) + dirY * i;
 
-                    if (BoardHelper.areCoorsValid(newX, newY)) {
-                        pathMask[fromSquare][toSquare] |= 1L << (coorsToPos(newX, newY));
+                    if (areCoorsValid(newX, newY)) {
+                        alignMask[fromSquare][toSquare] |= 1L << 63 - (coorsToPos(newX, newY));
                     }
                 }
             }
@@ -226,7 +224,7 @@ public class PrecomputedMoveData {
 
         // rayPathMask represents the squares that are part of a straight line in a specific direction.
         // It covers the entire line, including both occupied and unoccupied squares.
-        rayPathMask = new long[8][64];
+        dirRayMask = new long[8][64];
         for (int offsetIndex = 0; offsetIndex < squareChangeOffset2D.length; offsetIndex++) {
             for (int squareIndex = 0; squareIndex < 64; squareIndex++) {
                 int x = posToX(squareIndex);
@@ -236,7 +234,7 @@ public class PrecomputedMoveData {
                     int newX = x + squareChangeOffset2D[offsetIndex].first * i;
                     int newY = y + squareChangeOffset2D[offsetIndex].second * i;
                     if (areCoorsValid(newX, newY)) {
-                        rayPathMask[offsetIndex][squareIndex] |= 1L << (coorsToPos(newX, newY));
+                        dirRayMask[offsetIndex][squareIndex] |= 1L << 63 - coorsToPos(newX, newY);
                     } else {
                         break;
                     }
