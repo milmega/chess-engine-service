@@ -1,5 +1,7 @@
 package com.chessengine.chessengineservice;
 
+import java.util.List;
+
 public class ChessEngineService {
     Evaluator evaluator;
     Board board;
@@ -9,11 +11,19 @@ public class ChessEngineService {
         evaluator = new Evaluator();
     }
 
-    public String GetNextMoveAsString(int colour) {
-        Move nextMove = evaluator.getBestMove(colour, board);
-        board.makeMove(nextMove, false);
+    public Move getBestMove(int colour) {
+        Move bestMove = evaluator.getBestMove(colour, board);
+        if(bestMove != null) {
+            board.makeMove(bestMove, false);
+        } else {
+            bestMove = new Move(0, 0, 0, 0);
+        }
+        bestMove.gameResult = board.getGameResult(-colour);
+        return bestMove;
+    }
 
-        return nextMove.currentSquare + "," + nextMove.targetSquare;
+    public List<Move> getAllMoves(int colour) {
+        return board.getAllMoves(colour);
     }
 
     public Board getBoard() {

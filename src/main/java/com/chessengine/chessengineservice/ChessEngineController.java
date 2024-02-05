@@ -1,6 +1,7 @@
 package com.chessengine.chessengineservice;
 
 import org.springframework.web.bind.annotation.*;
+import java.util.List;
 
 @RestController
 public class ChessEngineController {
@@ -9,18 +10,26 @@ public class ChessEngineController {
 
     @GetMapping("/move")
     @CrossOrigin(origins = "http://localhost:3000")
-    public String GetNextMove(@RequestParam int start,
-                              @RequestParam int destination,
-                              @RequestParam int colour) {
-        if (start > -1) { // if computer is white, start and destination are -1
-            chessEngineService.getBoard().makeMove(new Move(start, destination, -colour), false);
-        }
-        return chessEngineService.GetNextMoveAsString(colour);
+    public Move getBestMove(@RequestParam int colour) {
+        return chessEngineService.getBestMove(colour);
+    }
+
+    @GetMapping("/allMoves")
+    @CrossOrigin(origins = "http://localhost:3000")
+    public @ResponseBody List<Move> getAllMoves(@RequestParam int colour) {
+        return chessEngineService.getAllMoves(colour);
+    }
+
+    @PostMapping("/makeMove")
+    @CrossOrigin(origins = "http://localhost:3000")
+    public int makeMove(@RequestBody Move move) {
+        chessEngineService.getBoard().makeMove(move, false);
+        return chessEngineService.getBoard().getGameResult(-move.colour);
     }
 
     @PostMapping("/reset")
     @CrossOrigin(origins = "http://localhost:3000")
-    public void Reset() {
+    public void reset() {
         chessEngineService.getBoard().resetBoard();
     }
 }
