@@ -1,29 +1,48 @@
 package com.chessengine.chessengineservice;
 
+import static com.chessengine.chessengineservice.Helpers.BoardHelper.*;
 import static java.lang.Math.abs;
 
 public class Bitboard {
 
+    Pair<Integer, Integer>[] orthoMoves = new Pair[] { new Pair<>(-1, 0), new Pair<>(0, 1), new Pair<>(1, 0), new Pair<>(0, -1) };
+    Pair<Integer, Integer>[] diagMoves = new Pair[] { new Pair<>(-1, -1), new Pair<>(-1, 1), new Pair<>(1, 1), new Pair<>(1, -1) };
+    Pair<Integer, Integer>[] knightMoves = new Pair[] {
+            new Pair<>(-2, -1),
+            new Pair<>(-2, 1),
+            new Pair<>(-1, 2),
+            new Pair<>(1, 2),
+            new Pair<>(2, 1),
+            new Pair<>(2, -1),
+            new Pair<>(1, -2),
+            new Pair<>(-1, -2)
+    };
+
     public long[][] pieces;
     public long allPieces;
-    public long emptySquares;
-    public long emptyOrWhiteSquares;
-    public long emptyOrBlackSquares;
-    public final long lastColumn = 0x101010101010101L;
-    public final long notLastColumn = ~lastColumn;
-    public final long firstColumn = lastColumn << 7;
-    public final long notFirstColumn = ~firstColumn;
+    public static final long lastRow = 0xFFL;
+    public static final long firstRow = lastRow << 56;
+    public static final long lastColumn = 0x101010101010101L;
+    public static final long notLastColumn = ~lastColumn;
+    public static final long firstColumn = lastColumn << 7;
+    public static final long notFirstColumn = ~firstColumn;
+    public static final long row4 = lastRow << 32;
+    public static final long row5 = lastRow << 24;
+    public long[] knightAttacks;
+    public long[] kingMoves;
+    public long[] whitePawnAttacks;
+    public long[] blackPawnAttacks;
     public long[] orthogonalSlider = {0, 0}; // map of rooks and queens
     public long[] diagonalSlider = {0, 0}; // map of bishops and queens
     MagicBitboard magicBitboard;
 
-
     public Bitboard() {
-        initialize();
+        reset();
+        init();
         magicBitboard = new MagicBitboard();
     }
 
-    public void initialize() {
+    public void reset() {
         pieces = new long[2][7];
         pieces[0][0] = 0xFFFFL; // all white pieces
         pieces[0][1] = 0xFF00L; // white pawns
@@ -44,13 +63,79 @@ public class Bitboard {
 
     public void updateBitboards() {
         allPieces = pieces[0][0] | pieces[1][0];
-        emptySquares = ~allPieces;
-        emptyOrWhiteSquares = ~pieces[1][0];
-        emptyOrBlackSquares = ~pieces[0][0];
         orthogonalSlider[0] = pieces[0][4] | pieces[0][5];
         orthogonalSlider[1] = pieces[1][4] | pieces[1][5];
         diagonalSlider[0] = pieces[0][3] | pieces[0][5];
         diagonalSlider[1] = pieces[1][3] | pieces[1][5];
+    }
+
+    public void init() {
+        knightAttacks = new long[64];
+        kingMoves = new long[64];
+        whitePawnAttacks = new long[64];
+        blackPawnAttacks = new long[64];
+
+        for (int i = 0; i < 8; i++) {
+            for (int j = 0; j < 8; j++) {
+                computeSquare(i, j);
+            }
+        }
+    }
+
+    private void computeSquare(int x, int y) {
+        int square = coorsToPos(x, y);
+
+        for (int dir = 0; dir < 4; dir++) {
+            // pawn attacks
+            if(areCoorsValid(x - 1, y + 1)) {
+                whitePawnAttacks[square] |= 1L << 63 -  coorsToPos(x - 1, y + 1);
+            }
+            if(areCoorsValid(x - 1, y - 1)) {
+                whitePawnAttacks[square] |= 1L << 63 -  coorsToPos(x - 1, y - 1);
+            }
+            if(areCoorsValid(x + 1, y + 1)) {
+                blackPawnAttacks[square] |= 1L << 63 -  coorsToPos(x + 1, y + 1);
+            }
+            if(areCoorsValid(x + 1, y - 1)) {
+                blackPawnAttacks[square] |= 1L << 63 -  coorsToPos(x + 1, y - 1);
+            }
+
+            // knight moves
+            for (Pair<Integer, Integer> move : knightMoves) {
+                int newX = x + move.first;
+                int newY = y + move.second;
+                if(areCoorsValid(newX, newY)) {
+                    knightAttacks[square] |= 1L << 63 - coorsToPos(newX, newY);
+                }
+            }
+
+            // king moves
+            for (int distance = 1; distance < 8; distance++) {
+                int newOrthoX = x + orthoMoves[dir].first * distance;
+                int newOrthoY = y + orthoMoves[dir].second * distance;
+                int newDiagX = x + diagMoves[dir].first * distance;
+                int newDiagY = y + diagMoves[dir].second * distance;
+
+                if(areCoorsValid(newOrthoX, newOrthoY)) {
+                    if(distance == 1) {
+                        kingMoves[square] |= 1L << 63 - coorsToPos(newOrthoX, newOrthoY);
+                    }
+                }
+                if(areCoorsValid(newDiagX, newDiagY)) {
+                    if(distance == 1) {
+                        kingMoves[square] |= 1L << 63 - coorsToPos(newDiagX, newDiagY);
+                    }
+                }
+            }
+        }
+    }
+
+    public static long shiftBits(long value, int shift) {
+        if (shift > 0) {
+            return value << shift;
+        } else {
+            return value >> -shift;
+        }
     }
 
     public static long setBit(long board, int index) {
@@ -94,10 +179,10 @@ public class Bitboard {
     }
 
     // Retrieve index of least significant set bit in a 64bit value. Sets the bit to zero.
-    public Pair<Integer, Long> popLeastSignificantBit(long board) {
+    public static Pair<Integer, Long> popLeastSignificantBit(long board) {
         int i = Long.numberOfTrailingZeros(board);
         board &= (board - 1);
-        return new Pair<>(i, board);
+        return new Pair<>(63 - i, board);
     }
 
     public boolean occupiesSquare(int piece, int index) {
@@ -111,36 +196,13 @@ public class Bitboard {
         return ((pieces[1][1] >> 9) & notFirstColumn) | ((pieces[1][1] >> 7) & notLastColumn);
     }
 
-    //return a map with bits on position where 'colour' can be attacked
-    public long getAttackData(int colour) {
-        long attackMap = getSlidingAttackMap(colour);
-        return attackMap;
-    }
 
-    private long getSlidingAttackMap(int colour) {
-        int index = colour > 0 ? 1 : 0;
-        long attackMap = 0;
-        attackMap |= updateAttackMap(colour, diagonalSlider[index], true); //enemy sliders
-        attackMap |= updateAttackMap(colour, orthogonalSlider[index], false); //enemy sliders
-        return attackMap;
-    }
-
-    private long updateAttackMap(int colour, long board, boolean diagonal) {
-        long blockers = allPieces & ~(pieces[1-colour][6]); //friendly king
-        long moveBoard = 0;
-        while(board != 0) {
-            Pair<Integer, Long> bitAndBoard = popLeastSignificantBit(board);
-            int startSquare = bitAndBoard.first;
-            board = bitAndBoard.second;
-            moveBoard |= magicBitboard.getSliderAttacks(startSquare, blockers, diagonal);
-        }
-        return moveBoard;
+    public long getSliderAttacks(int startSquare, long blockers, boolean diagonal) {
+        return magicBitboard.getSliderAttacks(63 - startSquare, blockers, diagonal);
     }
 
     public static void printHexAsGrid(long hexVal) {
         String bin = String.format("%64s", Long.toBinaryString(hexVal)).replace(' ', '0');
-        for(int i = 0; i < bin.length(); i++) {
-            if(i > 0 && i % 8 == 0) {
         for (int i = 0; i < bin.length(); i++) {
             if (i > 0 && i % 8 == 0) {
                 System.out.println();

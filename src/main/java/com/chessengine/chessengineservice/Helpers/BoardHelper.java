@@ -1,6 +1,9 @@
 package com.chessengine.chessengineservice.Helpers;
 
 import com.chessengine.chessengineservice.Pair;
+import com.chessengine.chessengineservice.Piece;
+
+import static java.lang.Math.abs;
 
 public class BoardHelper {
     public static boolean isSameColour(int piece1, int piece2) {
@@ -29,5 +32,13 @@ public class BoardHelper {
 
     public static Pair<Integer, Integer>[] getBishopMovement() {
         return new Pair[] {new Pair<>(1, -1), new Pair<>(1, 1), new Pair<>(-1, 1), new Pair<>(-1, -1)};
+    }
+
+    public static boolean isQueenOrBishop(int piece) {
+        return abs(piece) == Piece.BISHOP || abs(piece) == Piece.QUEEN;
+    }
+
+    public static boolean isQueenOrRook(int piece) {
+        return abs(piece) == Piece.ROOK || abs(piece) == Piece.QUEEN;
     }
 }
