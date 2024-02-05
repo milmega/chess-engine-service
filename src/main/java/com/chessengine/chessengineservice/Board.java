@@ -1,9 +1,12 @@
 package com.chessengine.chessengineservice;
 
+import com.chessengine.chessengineservice.MoveGenerator.MoveGenerator;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Stack;
 
+import static com.chessengine.chessengineservice.Helpers.BoardHelper.isSameColour;
+import static com.chessengine.chessengineservice.MoveGenerator.PrecomputedMoveData.precomputeMoveData;
 import static com.chessengine.chessengineservice.Piece.*;
 import static java.lang.Math.abs;
 
@@ -11,32 +14,30 @@ public class Board {
     private final int GAME_START = 0;
     private final int GAME_MIDDLE = 1;
     private final int GAME_END = 2;
-    private final Stack<MoveDetails> moveDetailsStack;
+    private final Stack<GameDetails> gameDetailsStack;
     private final MoveGenerator moveGenerator;
-    private final Bitboard bitboard;
+    public final Bitboard bitboard;
     private int[] numberOfPieces;
     public int[] square;
     private int whiteKingPosition;
     private int blackKingPosition;
     private boolean[] whiteCastling;
     private boolean[] blackCastling;
-    private Move lastMove;
     private int captures;
     private int gameStage;
     private List<Move> moveHistory;
     private int fullMoveCount;
-    private int halfMoveCount;
-    private int movesSinceCaptureOrPawnMove;
-
+    private int plysSinceCaptureOrPawnMove;
 
     public Board() {
         moveGenerator = new MoveGenerator();
-        moveDetailsStack = new Stack<>();
+        gameDetailsStack = new Stack<>();
         bitboard = new Bitboard();
+        precomputeMoveData();
         resetBoard();
     }
     /*
-    * {
+     {
                 -4, -2, -3, -5, -6, -3, -2, -4,
                 -1, -1, -1, -1, -1, -1, -1, -1,
                 0, 0, 0, 0, 0, 0, 0, 0,
@@ -63,130 +64,118 @@ public class Board {
         initializeBoard();
         bitboard.initialize();
         moveDetailsStack.clear();
+        bitboard.reset();
+        gameDetailsStack.clear();
         whiteKingPosition = 60;
         blackKingPosition = 4;
         whiteCastling = new boolean[] {false, false, false};
         blackCastling = new boolean[] {false, false, false};
-        lastMove = new Move(-1, -1, 0);
         captures = 0;
         moveHistory = new ArrayList<>();
         fullMoveCount = 1;
-        halfMoveCount = 0;
+        plysSinceCaptureOrPawnMove = 0;
         gameStage = GAME_START;
-        numberOfPieces = new int[] {7, 8, 7, 8}; // white not pawns, white pawns, black not pawns, black pawns
+        numberOfPieces = new int[] {8, 7, 8, 7}; // white pawns, white not pawns, black pawns, black not pawns
     }
+
+    public List<Move> getAllMoves(int colour) {
+        return moveGenerator.generateMoves(colour, this, false);
+    }
+
 
     // unmakeMove determines if the move will be reversed later. Saves necessary details to restore them later.
     public void makeMove(Move move, boolean unmakeMove) {
-        int start = move.currentSquare;
+        int start = move.startSquare;
         int target = move.targetSquare;
         int piece = square[start];
         int targetPiece = square[target];
-        int deltaY = abs(target%8 - start%8); // number of squares moved in Y coordinates
-        MoveDetails md = createMoveDetails(move);
-        Pair<Integer, Integer> rookMove = new Pair<>(-1, -1);
 
-        if (piece == KING) { // white castling
-            setKingPosition(1, target);
-            setCastling(1, new boolean[] {true, true, true});
-            md.castlingFlag = true;
-            if (deltaY > 1) { // if king is doing castling, move rook accordingly
-                if (target == 58) {
-                    rookMove = new Pair<>(56, 59);
-                    movePiece(56, 59, 0);
-                } else {
-                    rookMove = new Pair<>(63, 61);
-                    movePiece(63, 61, 0);
-                }
-            }
-        } else if (piece == -KING) { // black castling
-            setKingPosition(-1, target);
-            setCastling(-1, new boolean[] {true, true, true});
-            md.castlingFlag = true;
-            if (deltaY > 1) { // if king is doing castling, move rook accordingly
-                if (target == 2) {
-                    rookMove = new Pair<>(0, 3);
-                    movePiece(0, 3, 0);
-                } else {
-                    rookMove = new Pair<>(7, 5);
-                    movePiece(7, 5, 0);
-                }
+        GameDetails gameDetails = new GameDetails(move, whiteCastling, blackCastling, gameStage, fullMoveCount, plysSinceCaptureOrPawnMove, captures, numberOfPieces);
+
+        if (abs(piece) == KING) {
+            setKingPosition(move.colour, target);
+            setCastling(move.colour, new boolean[] {true, true, true});
+            if(move.castlingFlag) { // if king is doing castling, move rook accordingly
+                movePiece(move.preCastlingPosition, move.postCastlingPosition, 0, false);
             }
         }
-        // if a rook is moved, then disable castling
-        disableCastlingIfRookInvolved(start);
-        // if a rook is captured then disable castling
-        disableCastlingIfRookInvolved(target);
 
-        movePiece(start, target, 0);
-        if (md.promotionFlag) {
-            square[target] = QUEEN*md.colour;
-            bitboard.clearSquare(PAWN*md.colour, target);
-            bitboard.setSquare(QUEEN*md.colour, target);
-        } else if (md.enpassantFlag) {
-            square[md.enpassantPosition] = 0;
-            bitboard.clearSquare(-PAWN*md.colour, md.enpassantPosition);
+        disableCastlingIfRookInvolved(start); // if a rook is moved, then disable castling
+        disableCastlingIfRookInvolved(target); // if a rook is captured then disable castling TODO: is it even needed?
+
+        movePiece(start, target, targetPiece, false);
+        if (move.promotionFlag) {
+            square[target] = QUEEN*move.colour;
+            bitboard.clearSquare(move.piece, target);
+            bitboard.setSquare(QUEEN*move.colour, target);
+        } else if (move.enpassantFlag) {
+            square[move.enpassantPosition] = 0;
+            bitboard.clearSquare(-PAWN*move.colour, move.enpassantPosition);
+        }
+
+        moveHistory.add(move);
+        plysSinceCaptureOrPawnMove++;
+        if (move.colour == -1) {
+            fullMoveCount++;
+        }
+        if (abs(piece) == PAWN) {
+            plysSinceCaptureOrPawnMove = 0;
+        }
+        if (targetPiece != 0) {
+            captures++;
+            plysSinceCaptureOrPawnMove = 0;
+            if (captures == 3) { //TODO: is it good value?
+                gameStage = GAME_MIDDLE;
+            }
+            if (targetPiece > 0) {
+                numberOfPieces[targetPiece > 1 ? 1 : 0]--;
+            } else {
+                numberOfPieces[targetPiece < -1 ? 3 : 2]--;
+            }
+            if (numberOfPieces[1] < 4 || numberOfPieces[3] < 4) {
+                gameStage = GAME_END;
+            }
         }
 
         if (unmakeMove) {
-            md.rookMove = rookMove;
-            moveDetailsStack.push(md);
-        } else {
-            moveHistory.add(move); // does not have all neccessary info
-            lastMove = move.getCopy();
-            halfMoveCount++;
-            if (move.colour == -1) {
-                fullMoveCount++;
-            }
-            if (abs(piece) == PAWN) {
-                halfMoveCount = 0;
-            }
-            if (targetPiece != 0) {
-                captures++;
-                halfMoveCount = 0;
-                if (captures == 3) { //TODO: is it good value?
-                    gameStage = GAME_MIDDLE;
-                }
-                if (targetPiece > 0) {
-                    numberOfPieces[targetPiece > 1 ? 0 : 1]--;
-                } else {
-                    numberOfPieces[targetPiece < -1 ? 2 : 3]--;
-                }
-                if (numberOfPieces[0] < 4 || numberOfPieces[2] < 4) {
-                    gameStage = GAME_END;
-                }
-            }
+            gameDetailsStack.push(gameDetails);
         }
         bitboard.updateBitboards();
     }
 
     public void unmakeMove(Move move) {
         int start = move.targetSquare;
-        int target = move.currentSquare;
-        MoveDetails md = moveDetailsStack.pop();
-        setKingPosition(1, md.whiteKingPosition);
-        setKingPosition(-1, md.blackKingPosition);
-        setCastling(1, md.whiteCastling);
-        setCastling(-1, md.blackCastling);
-        Pair<Integer, Integer> rookMove = md.rookMove;
-        if (md.castlingFlag) {
-            movePiece(rookMove.second, rookMove.first, 0);
-        }
-        movePiece(start, target, md.targetPiece);
+        int target = move.startSquare;
 
-        if (md.promotionFlag) {
-            square[target] = PAWN*md.colour;
-            bitboard.clearSquare(QUEEN*md.colour, target);
-            bitboard.setSquare(PAWN*md.colour, target);
-        } else if (md.enpassantFlag) {
-            square[md.enpassantPosition] = -PAWN*md.colour;
-            bitboard.setSquare(-PAWN*md.colour, md.enpassantPosition);
+        if (abs(move.piece) == KING) {
+            setKingPosition(move.colour, target);
         }
+        GameDetails gameDetails = gameDetailsStack.pop();
+        setCastling(1, gameDetails.whiteCastling);
+        setCastling(-1, gameDetails.blackCastling);
+        movePiece(start, target, move.targetPiece, true);
+
+        if (move.castlingFlag) {
+            movePiece(move.postCastlingPosition, move.preCastlingPosition, 0, false);
+        } else if (move.promotionFlag) {
+            square[target] = PAWN*move.colour;
+            bitboard.clearSquare(QUEEN*move.colour, target);
+            bitboard.setSquare(move.piece, target);
+        } else if (move.enpassantFlag) {
+            square[move.enpassantPosition] = -PAWN*move.colour;
+            bitboard.setSquare(-PAWN*move.colour, move.enpassantPosition);
+        }
+
+        moveHistory.removeLast();
+        fullMoveCount = gameDetails.fullMoveCount;
+        plysSinceCaptureOrPawnMove = gameDetails.plysSinceCaptureOrPawnMove;
+        captures = gameDetails.captures;
+        numberOfPieces = gameDetails.numberOfPieces.clone();
         bitboard.updateBitboards();
     }
 
     //checks if king is under check
-    public boolean isInCheck(int colour) {
+    public boolean isInCheck(int colour) { //TODO: to delete after checking time of old move generation
         int kingPosition = getKingPosition(colour);
         for (int i = 0; i < 64; i++) {
             if (square[i] == 0 || isSameColour(colour, square[i])) {
@@ -216,32 +205,12 @@ public class Board {
         return colour > 0 ? whiteCastling : blackCastling;
     }
 
-    public void setCastling(int colour, String castling) {
-        if (colour > 0) {
-            whiteCastling[0] = castling.charAt(0) == '1';
-            whiteCastling[1] = castling.charAt(1) == '1';
-            whiteCastling[2] = castling.charAt(2) == '1';
-        } else {
-            blackCastling[0] = castling.charAt(0) == '1';
-            blackCastling[1] = castling.charAt(1) == '1';
-            blackCastling[2] = castling.charAt(2) == '1';
-        }
-    }
-
     public void setCastling(int colour, boolean[] castling) {
         if (colour > 0) {
             whiteCastling = castling.clone();
         } else {
             blackCastling = castling.clone();
         }
-    }
-
-    public Move getLastMove() {
-        return lastMove;
-    }
-
-    public boolean isSameColour(int piece1, int piece2) {
-        return (piece1 > 0 && piece2 > 0) || (piece1 < 0 && piece2 < 0);
     }
 
     private void disableCastlingIfRookInvolved(int index) {
@@ -256,37 +225,22 @@ public class Board {
         }
     }
 
-    private MoveDetails createMoveDetails(Move move) {
-        MoveDetails md = new MoveDetails();
-        md.colour = move.colour;
-        md.targetPiece = square[move.targetSquare];
-        md.whiteKingPosition = whiteKingPosition;
-        md.blackKingPosition = blackKingPosition;
-        md.whiteCastling = whiteCastling;
-        md.blackCastling = blackCastling;
-        md.rookMove = new Pair<>(-1, -1);
-        int positionDelta = abs(move.targetSquare - move.currentSquare);
-        if (abs(square[move.currentSquare]) == PAWN) {
-            if (move.targetSquare < 8 || move.targetSquare > 55) {
-                md.promotionFlag = true;
-            }
-            else if (positionDelta == 7 || positionDelta == 9) { //if diagonal move
-                md.enpassantFlag = true;
-                md.enpassantPosition = move.currentSquare + move.changeY;
-            }
-        }
-        return md;
-    }
-
     // moves a piece from start to target square. TargetPiece is a piece that was on a target square (needed for unmaking a move)
     private void movePiece(int start, int target, int targetPiece) {
         int piece = square[start];
         square[target] = piece;
-        square[start] = targetPiece;
+        square[start] = 0;
         bitboard.toggleSquares(piece, start, target);
         if (targetPiece != 0) {
-            bitboard.toggleSquare(targetPiece, start);
+            bitboard.toggleSquare(targetPiece, target);
+            if(unmake) {
+                square[start] = targetPiece;
+            }
         }
+    }
+
+    public Move getLastMove() {
+        return !moveHistory.isEmpty() ? moveHistory.getLast() : new Move(0, 0, 0, 0);
     }
 
     public int getGameStage() {
@@ -302,6 +256,10 @@ public class Board {
     }
 
     public int getHalfMoveCount() {
-        return halfMoveCount;
+        return moveHistory.size();
+    }
+
+    public int getPlysSinceCaptureOrPawnMove() {
+        return plysSinceCaptureOrPawnMove;
     }
 }
