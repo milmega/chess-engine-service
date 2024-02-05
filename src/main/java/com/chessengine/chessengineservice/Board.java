@@ -87,7 +87,7 @@ public class Board {
     public int getGameResult(int colour) {
         List<Move> possibleMoves = getAllMoves(colour);
         if (possibleMoves.isEmpty()) {
-            if (moveGenerator.isKingInCheck()) {
+            if (isKingInCheck()) {
                 return 1; // checkmate
             }
             return 5; // stalemate
@@ -103,7 +103,9 @@ public class Board {
         int piece = square[start];
         int targetPiece = square[target];
 
-        GameDetails gameDetails = new GameDetails(move, whiteCastling, blackCastling, gameStage, fullMoveCount, movesSinceCaptureOrPawnMove, captures, material);
+        if (unmakeMove) {
+            gameDetailsStack.push(new GameDetails(move, whiteCastling, blackCastling, gameStage, fullMoveCount, movesSinceCaptureOrPawnMove, captures, material));
+        }
 
         if (abs(piece) == KING) {
             setKingPosition(move.colour, target);
@@ -147,9 +149,6 @@ public class Board {
             }
         }
 
-        if (unmakeMove) {
-            gameDetailsStack.push(gameDetails);
-        }
         bitboard.updateBitboards();
     }
 
@@ -242,6 +241,10 @@ public class Board {
         return movesSinceCaptureOrPawnMove >= 50;
     }
 
+    public boolean isKingInCheck() {
+        return moveGenerator.isKingInCheck();
+    }
+
     //checks if king is under check
     public boolean isInCheck(int colour) { //TODO: to delete after checking time of old move generation
         int kingPosition = getKingPosition(colour);
@@ -324,9 +327,11 @@ public class Board {
         square[start] = 0;
         bitboard.toggleSquares(piece, start, target);
         if (targetPiece != 0) {
-            bitboard.toggleSquare(targetPiece, target);
             if(unmake) {
                 square[start] = targetPiece;
+                bitboard.toggleSquare(targetPiece, start);
+            } else {
+                bitboard.toggleSquare(targetPiece, target);
             }
         }
 
