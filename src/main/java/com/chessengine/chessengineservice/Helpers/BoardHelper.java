@@ -3,6 +3,8 @@ package com.chessengine.chessengineservice.Helpers;
 import com.chessengine.chessengineservice.Pair;
 import com.chessengine.chessengineservice.Piece;
 
+import java.util.Arrays;
+
 import static java.lang.Math.abs;
 
 public class BoardHelper {
@@ -40,5 +42,17 @@ public class BoardHelper {
 
     public static boolean isQueenOrRook(int piece) {
         return abs(piece) == Piece.ROOK || abs(piece) == Piece.QUEEN;
+    }
+
+    public static int[][] getDeepCopy(int[][] array) {
+        if (array == null) {
+            return null;
+        }
+        int[][] copy =  new int[array.length][array[0].length];
+
+        for (int i = 0; i < array.length; i++) {
+            copy[i] = Arrays.copyOf(array[i], array[0].length);
+        }
+        return copy;
     }
 }
