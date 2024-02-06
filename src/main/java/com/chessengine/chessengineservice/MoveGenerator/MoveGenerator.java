@@ -3,10 +3,10 @@ package com.chessengine.chessengineservice.MoveGenerator;
 import com.chessengine.chessengineservice.*;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 import static com.chessengine.chessengineservice.Bitboard.*;
+import static com.chessengine.chessengineservice.Helpers.BitboardHelper.*;
 import static com.chessengine.chessengineservice.Helpers.BoardHelper.*;
 import static com.chessengine.chessengineservice.MoveGenerator.PrecomputedMoveData.*;
 import static com.chessengine.chessengineservice.Piece.*;

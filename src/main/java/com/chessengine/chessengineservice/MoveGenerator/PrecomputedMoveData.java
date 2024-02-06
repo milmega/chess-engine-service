@@ -1,6 +1,5 @@
 package com.chessengine.chessengineservice.MoveGenerator;
 
-import com.chessengine.chessengineservice.Helpers.BoardHelper;
 import com.chessengine.chessengineservice.Pair;
 
 import java.util.ArrayList;
@@ -26,7 +25,6 @@ public class PrecomputedMoveData {
             new Pair<>(-1, 1),
             new Pair<>(1, -1)
     };
-    public static int[] dirLookup; //TODO: is it even needed or used anywhere?
 
     public static int[][] whitePawnAttacks;
     public static int[][] blackPawnAttacks;
@@ -164,21 +162,6 @@ public class PrecomputedMoveData {
             }
             // compute queen moves
             queenMoves[i] = rookMoves[i] | bishopMoves[i];
-        }
-
-        dirLookup = new int[127];
-        for (int i = 0; i < 127; i++) {
-            int offset = i - 63;
-            int absOffset = abs(offset);
-            int absDir = 1;
-            if (absOffset % 9 == 0) {
-                absDir = 9;
-            } else if (absOffset % 8 == 0) {
-                absDir = 8;
-            } else if (absOffset % 7 == 0) {
-                absDir = 7;
-            }
-            dirLookup[i] = (int) (absDir * signum(offset));
         }
 
         // Distance lookup

@@ -130,26 +130,6 @@ public class Bitboard {
         }
     }
 
-    public static long shiftBits(long value, int shift) {
-        if (shift > 0) {
-            return value << shift;
-        } else {
-            return value >> -shift;
-        }
-    }
-
-    public static long setBit(long board, int index) {
-        return board | 0x1L << index;
-    }
-
-    public static boolean isBitSet(long board, int index) {
-        return ((board >> index) & 1) != 0;
-    }
-
-    public static long clearBit(long board, int index) {
-        return board & ~(0x1L << index);
-    }
-
     public void setSquare(int piece, int index) {
         int colourIndex = piece > 0 ? 0 : 1;
         long mask = 0x1L << (63 - index);
@@ -178,17 +158,6 @@ public class Bitboard {
         pieces[colourIndex][0] ^= mask;
     }
 
-    // Retrieve index of least significant set bit in a 64bit value. Sets the bit to zero.
-    public static Pair<Integer, Long> popLeastSignificantBit(long board) {
-        int i = Long.numberOfTrailingZeros(board);
-        board &= (board - 1);
-        return new Pair<>(63 - i, board);
-    }
-
-    public boolean occupiesSquare(int piece, int index) {
-        return ((pieces[piece > 0 ? 0 : 1][abs(piece)] >> (63 - index)) & 1) != 0;
-    }
-
     public long getPawnAttacks(int colour) {
         if (colour > 0) {
             return ((pieces[0][1] << 9) & notLastColumn) | ((pieces[0][1] << 7) & notFirstColumn);
@@ -199,16 +168,5 @@ public class Bitboard {
 
     public long getSliderAttacks(int startSquare, long blockers, boolean diagonal) {
         return magicBitboard.getSliderAttacks(63 - startSquare, blockers, diagonal);
-    }
-
-    public static void printHexAsGrid(long hexVal) {
-        String bin = String.format("%64s", Long.toBinaryString(hexVal)).replace(' ', '0');
-        for (int i = 0; i < bin.length(); i++) {
-            if (i > 0 && i % 8 == 0) {
-                System.out.println();
-            }
-            System.out.print(bin.charAt(i) + " ");
-        }
-        System.out.println();
     }
 }

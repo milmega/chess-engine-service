@@ -4,7 +4,8 @@ import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.List;
 
-import static com.chessengine.chessengineservice.Bitboard.*;
+import static com.chessengine.chessengineservice.Helpers.BitboardHelper.isBitSet;
+import static com.chessengine.chessengineservice.Helpers.BitboardHelper.setBit;
 import static com.chessengine.chessengineservice.Helpers.BoardHelper.*;
 
 public class MagicBitboard {
