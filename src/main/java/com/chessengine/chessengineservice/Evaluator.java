@@ -53,8 +53,9 @@ public class Evaluator {
                 bestMoves.add(move);
                 bestScore = score;
             }
-            board.unmakeMove(move);
+
         }
+        //moveCache.put(fenCode, bestMoves);
 
         //return bestMoves.get(ThreadLocalRandom.current().nextInt(0, bestMoves.size())); //TODO: don't do it randomly, if capturing do it with the least value piece
 
@@ -70,7 +71,7 @@ public class Evaluator {
 
         List<Move> allMoves = moveGenerator.generateMoves(colour, board, false);
         if (allMoves.isEmpty()) {
-            if (board.isInCheck(colour)) {
+            if (board.isKingInCheck()) {
                 return MIN_VALUE + plyFromRoot; // if there are more ways to get a mate it prevents mate in the quickest way.
             }
             return 0; //TODO: add a penalty for a draw

@@ -245,21 +245,6 @@ public class Board {
         return moveGenerator.isKingInCheck();
     }
 
-    //checks if king is under check
-    public boolean isInCheck(int colour) { //TODO: to delete after checking time of old move generation
-        int kingPosition = getKingPosition(colour);
-        for (int i = 0; i < 64; i++) {
-            if (square[i] == 0 || isSameColour(colour, square[i])) {
-                continue;
-            }
-            List<Move> attackMoves = moveGenerator.getAttackMoves(i, this);
-            if (attackMoves.stream().anyMatch(move -> kingPosition == move.targetSquare)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
     public int getKingPosition(int colour) {
         return colour > 0 ? whiteKingPosition : blackKingPosition;
     }
