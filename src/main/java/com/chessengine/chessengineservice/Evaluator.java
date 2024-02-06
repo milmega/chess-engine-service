@@ -35,16 +35,16 @@ public class Evaluator {
             return movesFromCache.get(ThreadLocalRandom.current().nextInt(0, movesFromCache.size()));
         }
 
-        List<Move> allMoves = moveGenerator.generateAllMoves(colour, board);
+        List<Move> allMoves = moveGenerator.generateMoves(colour, board, false);
         System.out.println(allMoves.size());
         List<Move> bestMoves = new ArrayList<>();
         int bestScore = MIN_VALUE;
 
         for (Move move : allMoves) {
             board.makeMove(move, true);
-
             int score = -negamax(-colour, board, EVALUATION_DEPTH, 0, MIN_VALUE, MAX_VALUE);
-            System.out.println("From " + move.currentSquare/8 + ", " + move.currentSquare%8 + " to " + move.targetSquare/8 + ", " + move.targetSquare%8 + " - " + score);
+            board.unmakeMove(move);
+            //System.out.println("From " + move.startSquare/8 + ", " + move.startSquare%8 + " to " + move.targetSquare/8 + ", " + move.targetSquare%8 + " - " + score);
 
             if (score == bestScore) {
                 bestMoves.add(move);
@@ -56,11 +56,9 @@ public class Evaluator {
             board.unmakeMove(move);
         }
 
-        if (bestMoves.isEmpty()) {
-            return null;
-        }
-        moveCache.put(fenCode, bestMoves);
-        return bestMoves.get(ThreadLocalRandom.current().nextInt(0, bestMoves.size())); //TODO: don't do it randomly, if capturing do it with the least value piece
+        //return bestMoves.get(ThreadLocalRandom.current().nextInt(0, bestMoves.size())); //TODO: don't do it randomly, if capturing do it with the least value piece
+
+        return bestMoves.isEmpty() ? null : bestMoves.get(ThreadLocalRandom.current().nextInt(0, bestMoves.size()));
     }
 
     private int negamax(int colour, Board board, int depth, int plyFromRoot, int alpha, int beta) {
@@ -70,7 +68,7 @@ public class Evaluator {
             //return quiescenceNegamax(colour, board, alpha, beta);
         }
 
-        List<Move> allMoves = moveGenerator.generateAllMoves(colour, board);
+        List<Move> allMoves = moveGenerator.generateMoves(colour, board, false);
         if (allMoves.isEmpty()) {
             if (board.isInCheck(colour)) {
                 return MIN_VALUE + plyFromRoot; // if there are more ways to get a mate it prevents mate in the quickest way.
@@ -101,7 +99,7 @@ public class Evaluator {
             return beta;
         }
         alpha = Math.max(alpha, evaluation);
-        List<Move> allMoves = moveGenerator.generateAllMoves(colour, board); //TODO: generate captures only
+        List<Move> allMoves = moveGenerator.generateMoves(colour, board, false); //TODO: generate captures only
         for (Move move : allMoves) {
             board.makeMove(move, true);
             int score = -quiescenceNegamax(-colour, board, -beta, -alpha);
@@ -135,7 +133,8 @@ public class Evaluator {
     }
 
     private int getMobilityScore(int pos, Board board) {
-        return moveGenerator.getValidMoves(pos, board).size() * (board.square[pos] > 0 ? 1 : -1);
+        return 0; //TODO: reimplement mobility score
+        //return moveGenerator.getValidMoves(pos, board).size() * (board.square[pos] > 0 ? 1 : -1);
     }
 
     private int getPositionScore(int piece, int pos, int gameStage) {
@@ -191,8 +190,8 @@ public class Evaluator {
 
     private void printPrevMoves(ArrayList<Move> prevMoves, int score) {
         prevMoves.forEach(move -> {
-            int fromX = move.currentSquare / 8;
-            int fromY = move.currentSquare % 8;
+            int fromX = move.startSquare / 8;
+            int fromY = move.startSquare % 8;
             int toX = move.targetSquare / 8;
             int toY = move.targetSquare % 8;
             //System.out.print(", [from (" + fromX + ", " + fromY + ") to (" + toX + ", " + toY + ")] ");
