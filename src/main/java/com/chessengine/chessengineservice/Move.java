@@ -25,6 +25,7 @@ public class Move {
     public int preCastlingPosition;
     public int postCastlingPosition;
     public int gameResult;
+    public int score;
 
     public Move(int piece, int startSquare, int targetSquare, int targetPiece) {
         this.colour = piece > 0 ? 1 : -1;
@@ -46,6 +47,7 @@ public class Move {
         this.changeX = toX - fromX;
         this.changeY = toY - fromY;
         this.gameResult = 0;
+        this.score = 0;
     }
 
     @JsonIgnore
@@ -59,6 +61,7 @@ public class Move {
         copy.postCastlingPosition = this.postCastlingPosition;
         copy.pawnTwoSquaresMove = this.pawnTwoSquaresMove;
         copy.gameResult = this.gameResult;
+        copy.score = this.score;
         return copy;
     }
 }

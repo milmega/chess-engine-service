@@ -1,6 +1,5 @@
 package com.chessengine.chessengineservice;
 
-import com.chessengine.chessengineservice.Helpers.EvaluatorHelper;
 import com.chessengine.chessengineservice.Helpers.FenHelper;
 import com.chessengine.chessengineservice.MoveGenerator.MoveGenerator;
 
@@ -17,7 +16,7 @@ public class Evaluator {
     MoveGenerator moveGenerator;
     HashMap<String, List<Move>> moveCache;
     FenHelper fenHelper;
-    private final int EVALUATION_DEPTH = 3;
+    private final int EVALUATION_DEPTH = 4;
     private final int MAX_VALUE = 1000000000;
     private final int MIN_VALUE = -1000000000;
     public static int[] materialValue = {0, 100, 320, 330, 500, 900, 0};
@@ -37,13 +36,14 @@ public class Evaluator {
         }
 
         List<Move> allMoves = moveGenerator.generateMoves(colour, board, false);
+        allMoves = sort(null, allMoves, moveGenerator.opponentAttackMap, moveGenerator.opponentPawnAttackMap, board.getGameStage(), false, 0);
         System.out.println(allMoves.size());
         List<Move> bestMoves = new ArrayList<>();
         int bestScore = MIN_VALUE;
 
         for (Move move : allMoves) {
             board.makeMove(move, true);
-            int score = -negamax(-colour, board, EVALUATION_DEPTH, 0, MIN_VALUE, MAX_VALUE);
+            int score = -negamax(-colour, board, EVALUATION_DEPTH-1, 0, MIN_VALUE, MAX_VALUE);
             board.unmakeMove(move);
             //System.out.println("From " + move.startSquare/8 + ", " + move.startSquare%8 + " to " + move.targetSquare/8 + ", " + move.targetSquare%8 + " - " + score);
 
@@ -58,8 +58,7 @@ public class Evaluator {
         }
         //moveCache.put(fenCode, bestMoves);
 
-        //return bestMoves.get(ThreadLocalRandom.current().nextInt(0, bestMoves.size())); //TODO: don't do it randomly, if capturing do it with the least value piece
-
+        //TODO: don't do it randomly, if capturing do it with the least value piece
         return bestMoves.isEmpty() ? null : bestMoves.get(ThreadLocalRandom.current().nextInt(0, bestMoves.size()));
     }
 
@@ -101,7 +100,8 @@ public class Evaluator {
             return beta;
         }
         alpha = Math.max(alpha, evaluation);
-        List<Move> allMoves = moveGenerator.generateMoves(colour, board, false); //TODO: generate captures only
+        List<Move> allMoves = moveGenerator.generateMoves(colour, board, true);
+        allMoves = sort(null, allMoves, moveGenerator.opponentAttackMap, moveGenerator.opponentPawnAttackMap, board.getGameStage(), true, 0);
         for (Move move : allMoves) {
             board.makeMove(move, true);
             int score = -quiescenceNegamax(-colour, board, -beta, -alpha);
@@ -118,6 +118,7 @@ public class Evaluator {
     private int evaluateBoard(int colour, Board board) {
         int score = 0;
         int gameStage = board.getGameStage();
+        score += getMaterialScore(board.getMaterial());
         for (int i = 0; i < board.square.length; i++) {
             if (board.square[i] == 0) {
                 continue;
@@ -125,12 +126,17 @@ public class Evaluator {
             score += getMaterialScore(board.square[i]); //TODO should there be any weights
             score += getPositionScore(board.square[i], i, gameStage);
         }
-        score += getCheckingScore(colour, board);
+        score += getCheckingScore(colour, gameStage, board);
         return score * colour;
     }
 
-    private int getMaterialScore(int piece) {
-        return materialValue[Math.abs(piece)] * (piece > 0 ? 1 : -1);
+    private int getMaterialScore(int[][] material) {
+        int score = 0;
+        for (int i = 1; i < material[0].length; i++){
+            score += materialValue[i] * material[0][i]; // add for white
+            score -= materialValue[i] * material[1][i]; // subtract for black
+        }
+        return score;
     }
 
     private int getMobilityScore(int pos, Board board) {
@@ -138,51 +144,7 @@ public class Evaluator {
         //return moveGenerator.getValidMoves(pos, board).size() * (board.square[pos] > 0 ? 1 : -1);
     }
 
-    private int getPositionScore(int piece, int pos, int gameStage) {
-        if (piece == PAWN) {
-            return EvaluatorHelper.WHITE_PAWN_TABLE[pos];
-        }
-        else if (piece == -PAWN) {
-            return -EvaluatorHelper.BLACK_PAWN_TABLE[pos];
-        }
-        else if (piece == KNIGHT) {
-            return EvaluatorHelper.WHITE_KNIGHT_TABLE[pos];
-        }
-        else if (piece == -KNIGHT) {
-            return -EvaluatorHelper.BLACK_KNIGHT_TABLE[pos];
-        }
-        else if (piece == BISHOP) {
-            return EvaluatorHelper.WHITE_BISHOP_TABLE[pos];
-        }
-        else if (piece == -BISHOP) {
-            return -EvaluatorHelper.BLACK_BISHOP_TABLE[pos];
-        }
-        else if (piece == ROOK) {
-            return EvaluatorHelper.WHITE_ROOK_TABLE[pos];
-        }
-        else if (piece == -ROOK) {
-            return -EvaluatorHelper.BLACK_ROOK_TABLE[pos];
-        }
-        else if (piece == QUEEN) {
-            return EvaluatorHelper.WHITE_QUEEN_TABLE[pos];
-        }
-        else if (piece == -QUEEN) {
-            return -EvaluatorHelper.BLACK_QUEEN_TABLE[pos];
-        }
-        else if (piece == KING && gameStage < 2) {
-            return gameStage < 2
-                    ? EvaluatorHelper.WHITE_KING_TABLE_MIDDLE[pos]
-                    : EvaluatorHelper.WHITE_KING_TABLE_END[pos]; //TODO: change it dependding on the game state middle/ending
-        }
-        else if (piece == -KING && gameStage < 2) {
-            return gameStage < 2 //TODO: update gameStage to endgame
-                    ? -EvaluatorHelper.BLACK_KING_TABLE_MIDDLE[pos]
-                    : -EvaluatorHelper.BLACK_KING_TABLE_END[pos];
-        }
-        return 0;
-    }
-
-    private int getCheckingScore(int colour, Board board) {
+    private int getCheckingScore(int colour, int gameStage, Board board) {
         int score = 0;
         int opponentKingPosition = board.getKingPosition(-colour);
         //moveGenerator.getAttackMoves() //TODO: implement bitboard to keep squares that are being attacked

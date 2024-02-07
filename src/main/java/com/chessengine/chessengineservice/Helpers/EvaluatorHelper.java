@@ -1,5 +1,8 @@
 package com.chessengine.chessengineservice.Helpers;
 
+import static com.chessengine.chessengineservice.Piece.*;
+import static com.chessengine.chessengineservice.Piece.KING;
+
 public class EvaluatorHelper {
 
     public static final int[] WHITE_PAWN_TABLE = {
@@ -141,4 +144,48 @@ public class EvaluatorHelper {
             -30,-10, 20, 30, 30, 20,-10,-30,
             -30,-20,-10,  0,  0,-10,-20,-30,
             -50,-40,-30,-20,-20,-30,-40,-50};
+
+    public static int getPositionScore(int piece, int pos, int gameStage) { //TODO: does blacks need to be returned with minus if later it is multiplied by colour anyway?
+        if (piece == PAWN) {
+            return WHITE_PAWN_TABLE[pos];
+        }
+        else if (piece == -PAWN) {
+            return -BLACK_PAWN_TABLE[pos];
+        }
+        else if (piece == KNIGHT) {
+            return WHITE_KNIGHT_TABLE[pos];
+        }
+        else if (piece == -KNIGHT) {
+            return -BLACK_KNIGHT_TABLE[pos];
+        }
+        else if (piece == BISHOP) {
+            return WHITE_BISHOP_TABLE[pos];
+        }
+        else if (piece == -BISHOP) {
+            return -BLACK_BISHOP_TABLE[pos];
+        }
+        else if (piece == ROOK) {
+            return WHITE_ROOK_TABLE[pos];
+        }
+        else if (piece == -ROOK) {
+            return -BLACK_ROOK_TABLE[pos];
+        }
+        else if (piece == QUEEN) {
+            return WHITE_QUEEN_TABLE[pos];
+        }
+        else if (piece == -QUEEN) {
+            return -BLACK_QUEEN_TABLE[pos];
+        }
+        else if (piece == KING) {
+            return gameStage < 2
+                    ? EvaluatorHelper.WHITE_KING_TABLE_MIDDLE[pos]
+                    : EvaluatorHelper.WHITE_KING_TABLE_END[pos];
+        }
+        else if (piece == -KING) {
+            return gameStage < 2
+                    ? -EvaluatorHelper.BLACK_KING_TABLE_MIDDLE[pos]
+                    : -EvaluatorHelper.BLACK_KING_TABLE_END[pos];
+        }
+        return 0;
+    }
 }

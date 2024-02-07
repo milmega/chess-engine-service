@@ -10,9 +10,7 @@ import static com.chessengine.chessengineservice.Helpers.BitboardHelper.*;
 import static com.chessengine.chessengineservice.Helpers.BoardHelper.*;
 import static com.chessengine.chessengineservice.MoveGenerator.PrecomputedMoveData.*;
 import static com.chessengine.chessengineservice.Piece.*;
-import static java.lang.Math.abs;
 
-//TODO: implement move ordering
 //TODO: implement opening tree
 //TODO: implement endgaame
 //TODO implement transposition table - convert board to unique fen key
