@@ -9,7 +9,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 
-import static com.chessengine.chessengineservice.Piece.*;
+import static com.chessengine.chessengineservice.Helpers.EvaluatorHelper.getPositionScore;
+import static com.chessengine.chessengineservice.MoveSorter.sort;
 
 public class Evaluator {
 
@@ -71,7 +72,7 @@ public class Evaluator {
 
         List<Move> allMoves = moveGenerator.generateMoves(colour, board, false);
         if (allMoves.isEmpty()) {
-            if (board.isKingInCheck()) {
+            if (moveGenerator.isKingInCheck()) {
                 return MIN_VALUE + plyFromRoot; // if there are more ways to get a mate it prevents mate in the quickest way.
             }
             return 0; //TODO: add a penalty for a draw
@@ -111,7 +112,6 @@ public class Evaluator {
             }
             alpha = Math.max(alpha, score);
         }
-
         return alpha;
     }
 

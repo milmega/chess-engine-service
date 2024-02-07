@@ -87,7 +87,7 @@ public class Board {
     public int getGameResult(int colour) {
         List<Move> possibleMoves = getAllMoves(colour);
         if (possibleMoves.isEmpty()) {
-            if (isKingInCheck()) {
+            if (moveGenerator.isKingInCheck()) {
                 return 1; // checkmate
             }
             return 5; // stalemate
@@ -116,7 +116,7 @@ public class Board {
         }
 
         disableCastlingIfRookInvolved(start); // if a rook is moved, then disable castling
-        disableCastlingIfRookInvolved(target); // if a rook is captured then disable castling TODO: is it even needed?
+        disableCastlingIfRookInvolved(target); // if a rook is captured then disable castling
 
         movePiece(start, target, targetPiece, false);
         if (move.promotionFlag) {
@@ -241,10 +241,6 @@ public class Board {
         return movesSinceCaptureOrPawnMove >= 50;
     }
 
-    public boolean isKingInCheck() {
-        return moveGenerator.isKingInCheck();
-    }
-
     public int getKingPosition(int colour) {
         return colour > 0 ? whiteKingPosition : blackKingPosition;
     }
@@ -291,6 +287,10 @@ public class Board {
 
     public int getMovesSinceCaptureOrPawnMove() {
         return movesSinceCaptureOrPawnMove;
+    }
+
+    public int[][] getMaterial() {
+        return material;
     }
 
     private void disableCastlingIfRookInvolved(int index) {

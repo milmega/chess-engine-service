@@ -475,7 +475,7 @@ public class MoveGenerator {
                 int startSquare = plsbResult.first;
                 enpassantAttackingPawns = plsbResult.second;
                 int targetSquare = startSquare - pushOffset -1;
-                if (startSquare == lastMove.targetSquare + 1 && !isInCheckAfterEnpassant(startSquare, targetSquare, lastMove.targetSquare)) { //TODO: check if friendly king is not in check after enpassant
+                if (startSquare == lastMove.targetSquare + 1 && !isInCheckAfterEnpassant(startSquare, targetSquare, lastMove.targetSquare)) {
                     Move move = new Move(piece, startSquare, targetSquare, board.square[targetSquare]);
                     move.enpassantFlag = true;
                     move.enpassantPosition = lastMove.targetSquare;
