@@ -21,8 +21,7 @@ public class Board {
     public int[] square;
     private int whiteKingPosition;
     private int blackKingPosition;
-    private boolean[] whiteCastling;
-    private boolean[] blackCastling;
+    private int castlingRights;
     private int captures;
     private int gameStage;
     private List<Move> moveHistory;
@@ -66,8 +65,7 @@ public class Board {
         gameDetailsStack.clear();
         whiteKingPosition = 60;
         blackKingPosition = 4;
-        whiteCastling = new boolean[] {false, false, false};
-        blackCastling = new boolean[] {false, false, false};
+        castlingRights = 0;
         captures = 0;
         moveHistory = new ArrayList<>();
         fullMoveCount = 1;
@@ -102,9 +100,10 @@ public class Board {
         int target = move.targetSquare;
         int piece = square[start];
         int targetPiece = square[target];
+        int newCastling = castlingRights;
 
         if (unmakeMove) {
-            gameDetailsStack.push(new GameDetails(move, whiteCastling, blackCastling, gameStage, fullMoveCount, movesSinceCaptureOrPawnMove, captures, material));
+            gameDetailsStack.push(new GameDetails(move, castlingRights, gameStage, fullMoveCount, movesSinceCaptureOrPawnMove, captures, material));
         }
 
         if (abs(piece) == KING) {
@@ -115,17 +114,26 @@ public class Board {
             }
         }
 
-        disableCastlingIfRookInvolved(start); // if a rook is moved, then disable castling
-        disableCastlingIfRookInvolved(target); // if a rook is captured then disable castling
+        if (move.startSquare == 56 || move.targetSquare == 56) {
+            newCastling |= 0b1000;
+        } else if (move.startSquare == 63 || move.targetSquare == 63) {
+            newCastling |= 0b0100;
+        }
+        if (move.startSquare == 0 || move.targetSquare == 0) {
+            newCastling |= 0b0010;
+        } else if (move.startSquare == 7 || move.targetSquare == 7) {
+            newCastling |= 0b0001;
+        }
+        castlingRights |= newCastling;
 
         movePiece(start, target, targetPiece, false);
         if (move.promotionFlag) {
             square[target] = QUEEN*move.colour;
             bitboard.clearSquare(move.piece, target);
             bitboard.setSquare(QUEEN*move.colour, target);
-        } else if (move.enpassantFlag) {
-            square[move.enpassantPosition] = 0;
-            bitboard.clearSquare(-PAWN*move.colour, move.enpassantPosition);
+        } else if (move.enPassantFlag) {
+            square[move.enPassantPosition] = 0;
+            bitboard.clearSquare(-PAWN*move.colour, move.enPassantPosition);
         }
 
         moveHistory.add(move);
@@ -160,8 +168,7 @@ public class Board {
             setKingPosition(move.colour, target);
         }
         GameDetails gameDetails = gameDetailsStack.pop();
-        setCastling(1, gameDetails.whiteCastling);
-        setCastling(-1, gameDetails.blackCastling);
+        castlingRights = gameDetails.castling;
         movePiece(start, target, move.targetPiece, true);
 
         if (move.castlingFlag) {
@@ -170,9 +177,9 @@ public class Board {
             square[target] = PAWN*move.colour;
             bitboard.clearSquare(QUEEN*move.colour, target);
             bitboard.setSquare(move.piece, target);
-        } else if (move.enpassantFlag) {
-            square[move.enpassantPosition] = -PAWN*move.colour;
-            bitboard.setSquare(-PAWN*move.colour, move.enpassantPosition);
+        } else if (move.enPassantFlag) {
+            square[move.enPassantPosition] = -PAWN*move.colour;
+            bitboard.setSquare(-PAWN*move.colour, move.enPassantPosition);
         }
 
         moveHistory.removeLast();
@@ -253,16 +260,14 @@ public class Board {
         }
     }
 
-    public boolean[] getCastling(int colour) {
-        return colour > 0 ? whiteCastling : blackCastling;
+    public boolean isQueensideCastlingEnabled(int colour) {
+        int mask = colour > 0 ? 0b1000 : 0b0010;
+        return (castlingRights & mask) == 0;
     }
 
-    public void setCastling(int colour, boolean[] castling) {
-        if (colour > 0) {
-            whiteCastling = castling.clone();
-        } else {
-            blackCastling = castling.clone();
-        }
+    public boolean isKingsideCastlingEnabled(int colour) {
+        int mask = colour > 0 ? 0b0100 : 0b0001;
+        return (castlingRights & mask) == 0;
     }
 
     public Move getLastMove() {
@@ -291,18 +296,6 @@ public class Board {
 
     public int[][] getMaterial() {
         return material;
-    }
-
-    private void disableCastlingIfRookInvolved(int index) {
-        if (abs(square[index]) == ROOK) {
-            if (square[index] > 0 && (index == 56 || index == 63)) {
-                boolean[] whiteCastling = getCastling(1);
-                whiteCastling[index == 56 ? 1 : 2] = true;
-            } else if (square[index] < 0 && (index == 0 || index == 7)) {
-                boolean[] blackCastling = getCastling(-1);
-                blackCastling[index == 0 ? 1 : 2] = true;
-            }
-        }
     }
 
     // moves a piece from start to target square. TargetPiece is a piece that was on a target square (needed for unmaking a move)

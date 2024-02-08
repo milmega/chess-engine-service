@@ -247,9 +247,7 @@ public class MoveGenerator {
         // add castling moves
         if (!inCheck && generateQuietMoves) {
             long castleBlockers = opponentAttackMap | allPieces;
-            boolean[] castling = board.getCastling(friendlyColour);
-
-            if (!castling[0] && !castling[1]) { // queenside castling
+            if (board.isQueensideCastlingEnabled(friendlyColour)) {
                 long castleMask = friendlyColour > 0 ? whiteQueensideMask : blackQueensideMask;
                 long castleBlockMask = friendlyColour > 0 ? whiteQueensideMask2 : blackQueensideMask2;
                 if ((castleBlockMask & castleBlockers) == 0 && (castleMask & allPieces) == 0) {
@@ -261,7 +259,7 @@ public class MoveGenerator {
                     allMoves.add(move);
                 }
             }
-            if (!castling[0] && !castling[2]) { // kingside castling
+            if (board.isKingsideCastlingEnabled(friendlyColour)) {
                 long castleMask = friendlyColour > 0 ? whiteKingsideMask : blackKingsideMask;
                 if ((castleMask & castleBlockers) == 0)
                 {
@@ -353,8 +351,8 @@ public class MoveGenerator {
 
         long pawns = bitboard.pieces[friendlyIndex][PAWN];
         long promotionRowMask = friendlyColour > 0 ? firstRow : lastRow;
-        long enpassantRowMask = friendlyColour > 0 ? row4 : row5;
-        long enpassantAttackingPawns = pawns & enpassantRowMask;
+        long enPassantRowMask = friendlyColour > 0 ? row4 : row5;
+        long enPassantAttackingPawns = pawns & enPassantRowMask;
 
         long singlePush = shiftBits(pawns, pushOffset) & emptySquares;
         long pushPromotions = singlePush & promotionRowMask & checkRayBitmask;
@@ -468,29 +466,29 @@ public class MoveGenerator {
         // En passant
         Move lastMove = board.getLastMove();
         if (lastMove.pawnTwoSquaresMove) {
-            while (enpassantAttackingPawns != 0) {
-                Pair<Integer, Long> plsbResult = popLeastSignificantBit(enpassantAttackingPawns);
+            while (enPassantAttackingPawns != 0) {
+                Pair<Integer, Long> plsbResult = popLeastSignificantBit(enPassantAttackingPawns);
                 int startSquare = plsbResult.first;
-                enpassantAttackingPawns = plsbResult.second;
+                enPassantAttackingPawns = plsbResult.second;
                 int targetSquare = startSquare - pushOffset -1;
-                if (startSquare == lastMove.targetSquare + 1 && !isInCheckAfterEnpassant(startSquare, targetSquare, lastMove.targetSquare)) {
+                if (startSquare == lastMove.targetSquare + 1 && !isInCheckAfterenPassant(startSquare, targetSquare, lastMove.targetSquare)) {
                     Move move = new Move(piece, startSquare, targetSquare, board.square[targetSquare]);
-                    move.enpassantFlag = true;
-                    move.enpassantPosition = lastMove.targetSquare;
+                    move.enPassantFlag = true;
+                    move.enPassantPosition = lastMove.targetSquare;
                     allMoves.add(move);
                 }
                 targetSquare = startSquare - pushOffset + 1;
-                if (startSquare == lastMove.targetSquare - 1 && !isInCheckAfterEnpassant(startSquare, targetSquare, lastMove.targetSquare)) {
+                if (startSquare == lastMove.targetSquare - 1 && !isInCheckAfterenPassant(startSquare, targetSquare, lastMove.targetSquare)) {
                     Move move = new Move(piece, startSquare, targetSquare, board.square[targetSquare]);
-                    move.enpassantFlag = true;
-                    move.enpassantPosition = lastMove.targetSquare;
+                    move.enPassantFlag = true;
+                    move.enPassantPosition = lastMove.targetSquare;
                     allMoves.add(move);
                 }
             }
         }
     }
 
-    private boolean isInCheckAfterEnpassant(int startSquare, int targetSquare, int captureSquare) {
+    private boolean isInCheckAfterenPassant(int startSquare, int targetSquare, int captureSquare) {
         if (!isPiecePinned(startSquare) || alignMask[startSquare][friendlyKingSquare] == alignMask[targetSquare][friendlyKingSquare]){
             long opponentOrthogonalSliders = bitboard.orthogonalSlider[enemyIndex];
 

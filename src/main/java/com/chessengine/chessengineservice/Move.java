@@ -19,8 +19,8 @@ public class Move {
     public int changeY;
     public boolean pawnTwoSquaresMove;
     public boolean promotionFlag;
-    public boolean enpassantFlag;
-    public int enpassantPosition;
+    public boolean enPassantFlag;
+    public int enPassantPosition;
     public boolean castlingFlag;
     public int preCastlingPosition;
     public int postCastlingPosition;
@@ -35,8 +35,8 @@ public class Move {
         this.targetPiece = targetPiece;
         this.pawnTwoSquaresMove = false;
         this.promotionFlag = false;
-        this.enpassantFlag = false;
-        this.enpassantPosition = -1;
+        this.enPassantFlag = false;
+        this.enPassantPosition = -1;
         this.castlingFlag = false;
         this.preCastlingPosition = -1;
         this.postCastlingPosition = -1;
@@ -54,8 +54,8 @@ public class Move {
     public Move getCopy() {
         Move copy = new Move(this.piece, this.startSquare, this.targetSquare, this.targetPiece);
         copy.promotionFlag = this.promotionFlag;
-        copy.enpassantFlag = this.enpassantFlag;
-        copy.enpassantPosition = this.enpassantPosition;
+        copy.enPassantFlag = this.enPassantFlag;
+        copy.enPassantPosition = this.enPassantPosition;
         copy.castlingFlag = this.castlingFlag;
         copy.preCastlingPosition = this.preCastlingPosition;
         copy.postCastlingPosition = this.postCastlingPosition;

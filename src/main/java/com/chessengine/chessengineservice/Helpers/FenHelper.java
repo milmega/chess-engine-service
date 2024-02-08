@@ -42,33 +42,35 @@ public class FenHelper {
         }
 
         //castling rights
-        boolean[] whiteCastling = board.getCastling(1);
-        boolean[] blackCastling = board.getCastling(-1);
-        if (whiteCastling[1] && whiteCastling[2] && blackCastling[1] && blackCastling[2]) {
+        boolean wqCastlingRight = board.isQueensideCastlingEnabled(1);
+        boolean wkCastlingRight = board.isKingsideCastlingEnabled(1);
+        boolean bqCastlingRight = board.isQueensideCastlingEnabled(-1);
+        boolean bkCastlingRight = board.isKingsideCastlingEnabled(-1);
+        if (!wqCastlingRight && !wkCastlingRight && !bqCastlingRight && !bkCastlingRight) {
             code.append("-");
         } else {
-            if (!whiteCastling[2]) {
+            if (wkCastlingRight) {
                 code.append("K");
             }
-            if (!whiteCastling[1]) {
+            if (wqCastlingRight) {
                 code.append("Q");
             }
-            if (!blackCastling[2]) {
+            if (bkCastlingRight) {
                 code.append("k");
             }
-            if (!blackCastling[1]) {
+            if (bqCastlingRight) {
                 code.append("q");
             }
         }
 
-        //possible enpassant move
+        //possible enPassant move
         Move lastMove = board.getLastMove();
         if (lastMove.startSquare != -1 &&
                 abs(board.square[lastMove.targetSquare]) == PAWN
                 && abs(lastMove.targetSquare - lastMove.startSquare) == 16) {
             int colour = board.square[lastMove.targetSquare];
-            int enpassantSquare = lastMove.startSquare - 8*colour;
-            code.append(convertIntToSquareCode(enpassantSquare));
+            int enPassantSquare = lastMove.startSquare - 8*colour;
+            code.append(convertIntToSquareCode(enPassantSquare));
         } else {
             code.append(" -");
         }
