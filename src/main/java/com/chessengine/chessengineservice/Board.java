@@ -1,11 +1,13 @@
 package com.chessengine.chessengineservice;
 
+import com.chessengine.chessengineservice.Helpers.Zobrist;
 import com.chessengine.chessengineservice.MoveGenerator.MoveGenerator;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Stack;
 
 import static com.chessengine.chessengineservice.Helpers.BoardHelper.*;
+import static com.chessengine.chessengineservice.Helpers.Zobrist.pieceToIndex;
 import static com.chessengine.chessengineservice.MoveGenerator.PrecomputedMoveData.precomputeMoveData;
 import static com.chessengine.chessengineservice.Piece.*;
 import static java.lang.Math.abs;
@@ -19,9 +21,13 @@ public class Board {
     public final Bitboard bitboard;
     private int[][] material;
     public int[] square;
+    public long zobristKey;
+    private int[][] material;
+    private int colourToMove;
     private int whiteKingPosition;
     private int blackKingPosition;
     private int castlingRights;
+    private int enPassantColumn;
     private int captures;
     private int gameStage;
     private List<Move> moveHistory;
@@ -63,9 +69,11 @@ public class Board {
         initializeBoard();
         bitboard.reset();
         gameDetailsStack.clear();
+        colourToMove = 1;
         whiteKingPosition = 60;
         blackKingPosition = 4;
         castlingRights = 0;
+        enPassantColumn = -1;
         captures = 0;
         moveHistory = new ArrayList<>();
         fullMoveCount = 1;
@@ -73,6 +81,7 @@ public class Board {
         gameStage = GAME_START;
         // 0 - white, 1 - black = skip | pawns | knights | bishops | rooks | queens | king
         material = new int[][] {{0, 8, 2, 2, 2, 1, 1}, {0, 8, 2, 2, 2, 1, 1}};
+        zobristKey = Zobrist.createZobristKey(this);
     }
 
     public List<Move> getAllMoves(int colour) {
@@ -101,16 +110,20 @@ public class Board {
         int piece = square[start];
         int targetPiece = square[target];
         int newCastling = castlingRights;
+        long newZobristKey = zobristKey;
 
         if (unmakeMove) {
-            gameDetailsStack.push(new GameDetails(move, castlingRights, gameStage, fullMoveCount, movesSinceCaptureOrPawnMove, captures, material));
+            gameDetailsStack.push(new GameDetails(move, zobristKey, castlingRights, enPassantColumn, gameStage, fullMoveCount, movesSinceCaptureOrPawnMove, captures, material));
         }
+        enPassantColumn = 8; // columns are from 0 to 7 so for the zobrist key index 8 implies no enPassant
 
         if (abs(piece) == KING) {
             setKingPosition(move.colour, target);
-            setCastling(move.colour, new boolean[] {true, true, true});
-            if(move.castlingFlag) { // if king is doing castling, move rook accordingly
+            newCastling = move.colour > 0 ? 0b1100 : 0b0011;
+            if (move.castlingFlag) { // if king is doing castling, move rook accordingly
                 movePiece(move.preCastlingPosition, move.postCastlingPosition, 0, false);
+                newZobristKey ^= Zobrist.piecesArray[pieceToIndex(ROOK*move.colour)][move.preCastlingPosition];
+                newZobristKey ^= Zobrist.piecesArray[pieceToIndex(ROOK*move.colour)][move.postCastlingPosition];
             }
         }
 
@@ -134,6 +147,20 @@ public class Board {
         } else if (move.enPassantFlag) {
             square[move.enPassantPosition] = 0;
             bitboard.clearSquare(-PAWN*move.colour, move.enPassantPosition);
+            newZobristKey ^= Zobrist.piecesArray[pieceToIndex(-PAWN*move.colour)][move.enPassantPosition];
+        } else if (move.pawnTwoSquaresMove) {
+            newZobristKey ^= Zobrist.enPassantColumn[enPassantColumn];
+            enPassantColumn = move.fromY;
+            newZobristKey ^= Zobrist.enPassantColumn[enPassantColumn];
+        }
+
+        newZobristKey ^= Zobrist.sideToMove;
+        newZobristKey ^= Zobrist.piecesArray[pieceToIndex(piece)][start];
+        newZobristKey ^= Zobrist.piecesArray[pieceToIndex(square[target])][target];
+
+        if (oldCastling != newCastling) {
+            newZobristKey ^= Zobrist.castlingRights[oldCastling]; // remove old castling rights state
+            newZobristKey ^= Zobrist.castlingRights[castlingRights]; // add new castling rights state //TODO: should i be changed?
         }
 
         moveHistory.add(move);
@@ -145,6 +172,7 @@ public class Board {
             movesSinceCaptureOrPawnMove = 0;
         }
         if (targetPiece != 0) {
+            newZobristKey ^= Zobrist.piecesArray[pieceToIndex(targetPiece)][target];
             captures++;
             movesSinceCaptureOrPawnMove = 0;
             if (captures == 3) { //TODO: is it good value?
@@ -156,7 +184,8 @@ public class Board {
                 gameStage = GAME_END;
             }
         }
-
+        colourToMove = -colourToMove;
+        zobristKey = newZobristKey;
         bitboard.updateBitboards();
     }
 
@@ -168,7 +197,9 @@ public class Board {
             setKingPosition(move.colour, target);
         }
         GameDetails gameDetails = gameDetailsStack.pop();
+        zobristKey = gameDetails.zobristKey;
         castlingRights = gameDetails.castling;
+        enPassantColumn = gameDetails.enPassantColumn;
         movePiece(start, target, move.targetPiece, true);
 
         if (move.castlingFlag) {
@@ -187,6 +218,7 @@ public class Board {
         movesSinceCaptureOrPawnMove = gameDetails.movesSinceCaptureOrPawnMove;
         captures = gameDetails.captures;
         material = getDeepCopy(gameDetails.material);
+        colourToMove = -colourToMove;
         bitboard.updateBitboards();
     }
 
@@ -248,6 +280,10 @@ public class Board {
         return movesSinceCaptureOrPawnMove >= 50;
     }
 
+    public int getColourToMove() {
+        return colourToMove;
+    }
+
     public int getKingPosition(int colour) {
         return colour > 0 ? whiteKingPosition : blackKingPosition;
     }
@@ -260,6 +296,10 @@ public class Board {
         }
     }
 
+    public int getCastling() {
+        return castlingRights;
+    }
+
     public boolean isQueensideCastlingEnabled(int colour) {
         int mask = colour > 0 ? 0b1000 : 0b0010;
         return (castlingRights & mask) == 0;
@@ -268,6 +308,10 @@ public class Board {
     public boolean isKingsideCastlingEnabled(int colour) {
         int mask = colour > 0 ? 0b0100 : 0b0001;
         return (castlingRights & mask) == 0;
+    }
+
+    public int getEnPassantColumn() {
+        return enPassantColumn;
     }
 
     public Move getLastMove() {
