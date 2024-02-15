@@ -11,29 +11,8 @@ public class Zobrist {
     public static long[] enPassantColumn = new long[9];
     public static long sideToMove;
 
-    public Zobrist() {
-        int seed = 29426028;
-        Random rng = new Random(seed);
-
-        for (int squareIndex = 0; squareIndex < 64; squareIndex++) {
-            for(int piece = 1; piece < 7; piece++) {
-                piecesArray[piece][squareIndex] = random64BitNumber(rng);
-            }
-            for(int piece = 9; piece < 15; piece++) {
-                piecesArray[piece][squareIndex] = random64BitNumber(rng);
-            }
-        }
-        for (int i = 0; i < castlingRights.length; i++) {
-            castlingRights[i] = random64BitNumber(rng);
-        }
-        enPassantColumn[0] = 0;
-        for (int i = 1; i < enPassantColumn.length; i++) {
-            enPassantColumn[i] = random64BitNumber(rng);
-        }
-        sideToMove = random64BitNumber(rng);
-    }
-
     public static long createZobristKey(Board board) {
+        initialize();
         long key = 0;
         for (int i = 0; i < 64; i++) {
             int piece = board.square[i];
@@ -68,5 +47,27 @@ public class Zobrist {
             value = (value << 8) + (b & 255);
         }
         return value;
+    }
+
+    static void initialize() {
+        int seed = 29426028;
+        Random rng = new Random(seed);
+
+        for (int squareIndex = 0; squareIndex < 64; squareIndex++) {
+            for(int piece = 1; piece < 7; piece++) {
+                piecesArray[piece][squareIndex] = random64BitNumber(rng);
+            }
+            for(int piece = 9; piece < 15; piece++) {
+                piecesArray[piece][squareIndex] = random64BitNumber(rng);
+            }
+        }
+        for (int i = 0; i < castlingRights.length; i++) {
+            castlingRights[i] = random64BitNumber(rng);
+        }
+        enPassantColumn[0] = 0;
+        for (int i = 1; i < enPassantColumn.length; i++) {
+            enPassantColumn[i] = random64BitNumber(rng);
+        }
+        sideToMove = random64BitNumber(rng);
     }
 }
