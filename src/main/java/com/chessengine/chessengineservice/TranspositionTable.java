@@ -16,7 +16,7 @@ public class TranspositionTable {
     public int lowerBound = 1;
     public int upperBound = 2;
     boolean disabled = false;
-    boolean useMap = true; // TODO: delete it later when decided if map is better than array
+    boolean useMap = false; // TODO: delete it later when decided if map is better than array
 
     public TranspositionTable(Board board) {
         this.board = board;

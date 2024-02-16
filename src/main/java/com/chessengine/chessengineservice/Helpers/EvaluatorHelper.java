@@ -145,7 +145,7 @@ public class EvaluatorHelper {
             -30,-20,-10,  0,  0,-10,-20,-30,
             -50,-40,-30,-20,-20,-30,-40,-50};
 
-    public static int getPositionScore(int piece, int pos, int gameStage) { //TODO: does blacks need to be returned with minus if later it is multiplied by colour anyway?
+    public static int getPositionScore(int piece, int pos, int gameStage) {
         if (piece == PAWN) {
             return WHITE_PAWN_TABLE[pos];
         }

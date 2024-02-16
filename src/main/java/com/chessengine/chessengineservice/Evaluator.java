@@ -18,6 +18,7 @@ public class Evaluator {
     Board board;
     TranspositionTable tTable;
     private final int EVALUATION_DEPTH = 5;
+    private final int QSEARCH_DEPTH = 3;
     private final int MAX_VALUE = 1000000000;
     private final int MIN_VALUE = -1000000000;
     public static int[] materialValue = {0, 100, 320, 330, 500, 900, 0};
@@ -50,7 +51,6 @@ public class Evaluator {
                 bestScore = score;
             }
         }
-
         return bestMoves.isEmpty() ? null : bestMoves.get(0);
     }
 
@@ -60,7 +60,7 @@ public class Evaluator {
             return ttScore;
         }
         if (depth == 0) {
-            return quiescenceNegamax(colour, 3, alpha, beta);
+            return quiescenceNegamax(colour, QSEARCH_DEPTH, alpha, beta);
         }
 
         List<Move> allMoves = moveGenerator.generateMoves(colour, false);
@@ -150,7 +150,7 @@ public class Evaluator {
     private int getCheckingScore(int colour, int gameStage) {
         int score = 0;
         int opponentKingPosition = board.getKingPosition(-colour);
-        //moveGenerator.getAttackMoves() //TODO: implement bitboard to keep squares that are being attacked
+        //moveGenerator.getAttackMoves() //TODO: use bitboard to keep squares that are being attacked
         return score;
     }
 

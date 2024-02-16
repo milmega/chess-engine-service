@@ -167,7 +167,7 @@ public class Board {
 
         if (oldCastling != newCastling) {
             newZobristKey ^= Zobrist.castlingRights[oldCastling]; // remove old castling rights state
-            newZobristKey ^= Zobrist.castlingRights[castlingRights]; // add new castling rights state //TODO: should i be changed?
+            newZobristKey ^= Zobrist.castlingRights[castlingRights]; // add new castling rights state
         }
 
         moveHistory.add(move);
@@ -182,8 +182,8 @@ public class Board {
             newZobristKey ^= Zobrist.piecesArray[pieceToIndex(targetPiece)][target];
             captures++;
             movesSinceCaptureOrPawnMove = 0;
-            if (captures == 3) { //TODO: is it good value?
-                gameStage = GAME_MIDDLE;
+            if (captures == 3) {
+                gameStage = GAME_MIDDLE; //TODO: add more conditions for moving to next state
             }
             material[1-colourIndex][abs(targetPiece)]--;
             if (material[0][KNIGHT] + material[0][BISHOP] + material[0][ROOK] + material[0][QUEEN] < 4 ||
