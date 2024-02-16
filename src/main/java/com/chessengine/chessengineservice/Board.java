@@ -19,7 +19,6 @@ public class Board {
     private final Stack<GameDetails> gameDetailsStack;
     private final MoveGenerator moveGenerator;
     public final Bitboard bitboard;
-    private int[][] material;
     public int[] square;
     public long zobristKey;
     private int[][] material;
@@ -73,7 +72,7 @@ public class Board {
         whiteKingPosition = 60;
         blackKingPosition = 4;
         castlingRights = 0;
-        enPassantColumn = -1;
+        enPassantColumn = 8;
         captures = 0;
         moveHistory = new ArrayList<>();
         fullMoveCount = 1;
@@ -109,8 +108,10 @@ public class Board {
         int target = move.targetSquare;
         int piece = square[start];
         int targetPiece = square[target];
+        int oldCastling = castlingRights;
         int newCastling = castlingRights;
         long newZobristKey = zobristKey;
+        int colourIndex = move.colour > 0 ? 0 : 1;
 
         if (unmakeMove) {
             gameDetailsStack.push(new GameDetails(move, zobristKey, castlingRights, enPassantColumn, gameStage, fullMoveCount, movesSinceCaptureOrPawnMove, captures, material));
@@ -142,10 +143,13 @@ public class Board {
         movePiece(start, target, targetPiece, false);
         if (move.promotionFlag) {
             square[target] = QUEEN*move.colour;
+            material[colourIndex][QUEEN]++;
+            material[colourIndex][PAWN]--;
             bitboard.clearSquare(move.piece, target);
             bitboard.setSquare(QUEEN*move.colour, target);
         } else if (move.enPassantFlag) {
             square[move.enPassantPosition] = 0;
+            material[1-colourIndex][PAWN]--;
             bitboard.clearSquare(-PAWN*move.colour, move.enPassantPosition);
             newZobristKey ^= Zobrist.piecesArray[pieceToIndex(-PAWN*move.colour)][move.enPassantPosition];
         } else if (move.pawnTwoSquaresMove) {
@@ -178,7 +182,7 @@ public class Board {
             if (captures == 3) { //TODO: is it good value?
                 gameStage = GAME_MIDDLE;
             }
-            material[targetPiece > 0 ? 0 : 1][abs(targetPiece)]--;
+            material[1-colourIndex][abs(targetPiece)]--;
             if (material[0][KNIGHT] + material[0][BISHOP] + material[0][ROOK] + material[0][QUEEN] < 4 ||
                     material[1][KNIGHT] + material[1][BISHOP] + material[1][ROOK] + material[1][QUEEN] < 4 ) {
                 gameStage = GAME_END;
