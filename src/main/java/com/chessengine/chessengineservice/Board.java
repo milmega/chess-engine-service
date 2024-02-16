@@ -17,10 +17,11 @@ public class Board {
     private final int GAME_MIDDLE = 1;
     private final int GAME_END = 2;
     private final Stack<GameDetails> gameDetailsStack;
-    private final MoveGenerator moveGenerator;
+    public final MoveGenerator moveGenerator;
     public final Bitboard bitboard;
     public int[] square;
     public long zobristKey;
+    public TranspositionTable tTable;
     private int[][] material;
     private int colourToMove;
     private int whiteKingPosition;
@@ -34,10 +35,10 @@ public class Board {
     private int movesSinceCaptureOrPawnMove;
 
     public Board() {
-        moveGenerator = new MoveGenerator();
-        gameDetailsStack = new Stack<>();
         bitboard = new Bitboard();
         tTable = new TranspositionTable(this);
+        moveGenerator = new MoveGenerator(this);
+        gameDetailsStack = new Stack<>();
         precomputeMoveData();
         resetBoard();
     }
@@ -86,7 +87,7 @@ public class Board {
     }
 
     public List<Move> getAllMoves(int colour) {
-        return moveGenerator.generateMoves(colour, this, false);
+        return moveGenerator.generateMoves(colour, false);
     }
 
     /* this method is called after each move to check if it led to a mate or a draw

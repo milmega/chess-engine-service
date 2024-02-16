@@ -22,16 +22,16 @@ public class Evaluator {
     private final int MIN_VALUE = -1000000000;
     public static int[] materialValue = {0, 100, 320, 330, 500, 900, 0};
 
-    public Evaluator(Board board) { //TODO: rewrite it so it uses board as a class property
-        moveGenerator = new MoveGenerator();
+    public Evaluator(Board board) {
+        this.board = board;
+        moveGenerator = board.moveGenerator;
         moveCache = new HashMap<>();
         fenHelper = new FenHelper();
-        this.board = board;
         tTable = board.tTable;
     }
 
     public Move getBestMove(int colour) {
-        List<Move> allMoves = moveGenerator.generateMoves(colour, board, false);
+        List<Move> allMoves = moveGenerator.generateMoves(colour, false);
         allMoves = sort(null, allMoves, moveGenerator.opponentAttackMap, moveGenerator.opponentPawnAttackMap, board.getGameStage(), false, 0);
         List<Move> bestMoves = new ArrayList<>();
         int bestScore = MIN_VALUE;
@@ -63,7 +63,7 @@ public class Evaluator {
             return quiescenceNegamax(colour, 3, alpha, beta);
         }
 
-        List<Move> allMoves = moveGenerator.generateMoves(colour, board, false);
+        List<Move> allMoves = moveGenerator.generateMoves(colour, false);
         if (allMoves.isEmpty()) {
             if (moveGenerator.isKingInCheck()) {
                 return MIN_VALUE + plyFromRoot; // if there are more ways to get a mate it prevents mate in the quickest way.
@@ -104,7 +104,7 @@ public class Evaluator {
             return evaluation;
         }
         alpha = Math.max(alpha, evaluation);
-        List<Move> allMoves = moveGenerator.generateMoves(colour, board, true);
+        List<Move> allMoves = moveGenerator.generateMoves(colour, true);
         allMoves = sort(null, allMoves, moveGenerator.opponentAttackMap, moveGenerator.opponentPawnAttackMap, board.getGameStage(), true, 0);
         for (Move move : allMoves) {
             board.makeMove(move, true);
@@ -129,7 +129,7 @@ public class Evaluator {
             }
             score += getPositionScore(board.square[i], i, gameStage); //TODO: reimplement position score to update it when making and unmaking moves
         }
-        score += getCheckingScore(colour, gameStage, board);
+        score += getCheckingScore(colour, gameStage);
         return score * colour;
     }
 
@@ -142,12 +142,12 @@ public class Evaluator {
         return score;
     }
 
-    private int getMobilityScore(int pos, Board board) {
+    private int getMobilityScore(int pos) {
         return 0; //TODO: reimplement mobility score
         //return moveGenerator.getValidMoves(pos, board).size() * (board.square[pos] > 0 ? 1 : -1);
     }
 
-    private int getCheckingScore(int colour, int gameStage, Board board) {
+    private int getCheckingScore(int colour, int gameStage) {
         int score = 0;
         int opponentKingPosition = board.getKingPosition(-colour);
         //moveGenerator.getAttackMoves() //TODO: implement bitboard to keep squares that are being attacked

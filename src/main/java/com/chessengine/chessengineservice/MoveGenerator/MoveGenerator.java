@@ -13,7 +13,6 @@ import static com.chessengine.chessengineservice.Piece.*;
 
 //TODO: implement opening tree
 //TODO: implement endgaame
-//TODO implement transposition table - convert board to unique fen key
 
 public class MoveGenerator {
 
@@ -58,14 +57,17 @@ public class MoveGenerator {
     Bitboard bitboard;
     List<Move> allMoves;
 
+    public MoveGenerator(Board board) {
+        this.board = board;
+        this.bitboard = board.bitboard;
+    }
+
     public boolean isKingInCheck() {
         return inCheck;
     }
 
-    public List<Move> generateMoves(int colour, Board board, boolean capturesOnly) {
+    public List<Move> generateMoves(int colour, boolean capturesOnly) {
         allMoves = new ArrayList<>();
-        this.board = board;
-        this.bitboard = board.bitboard;
         generateQuietMoves = !capturesOnly;
 
         initialize(colour);
