@@ -8,7 +8,7 @@ public class ChessEngineService {
 
     public ChessEngineService() {
         board = new Board();
-        evaluator = new Evaluator();
+        evaluator = new Evaluator(board);
     }
 
     public Move getBestMove(int colour) {

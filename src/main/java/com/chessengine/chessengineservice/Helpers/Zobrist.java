@@ -32,7 +32,7 @@ public class Zobrist {
         if(piece > 0) {
             return piece;
         }
-        return 3-piece; // converting piece value to index (white from 1 to 6, black from 9 to 14)
+        return 8-piece; // converting piece value to index (white from 1 to 6, black from 9 to 14) TODO: pawn black should be 9 not 4
     }
 
     static long random64BitNumber(Random rng) {

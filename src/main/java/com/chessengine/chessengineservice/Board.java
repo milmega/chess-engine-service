@@ -37,6 +37,7 @@ public class Board {
         moveGenerator = new MoveGenerator();
         gameDetailsStack = new Stack<>();
         bitboard = new Bitboard();
+        tTable = new TranspositionTable(this);
         precomputeMoveData();
         resetBoard();
     }
@@ -68,6 +69,7 @@ public class Board {
         initializeBoard();
         bitboard.reset();
         gameDetailsStack.clear();
+        tTable.reset();
         colourToMove = 1;
         whiteKingPosition = 60;
         blackKingPosition = 4;

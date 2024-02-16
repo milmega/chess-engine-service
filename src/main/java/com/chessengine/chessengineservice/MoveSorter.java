@@ -86,9 +86,7 @@ public class MoveSorter {
     static int partition(Move[] moves, int left, int right) {
         int pivot = moves[right].score;
         int i = left - 1;
-        if(i == -2) {
-            System.out.println();
-        }
+
         for (int j = left; j < right; j++) {
             if (moves[j].score >= pivot) {
                 i++;

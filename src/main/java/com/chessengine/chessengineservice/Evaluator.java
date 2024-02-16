@@ -6,7 +6,6 @@ import com.chessengine.chessengineservice.MoveGenerator.MoveGenerator;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-import java.util.concurrent.ThreadLocalRandom;
 
 import static com.chessengine.chessengineservice.Helpers.EvaluatorHelper.getPositionScore;
 import static com.chessengine.chessengineservice.MoveSorter.sort;
@@ -16,34 +15,30 @@ public class Evaluator {
     MoveGenerator moveGenerator;
     HashMap<String, List<Move>> moveCache;
     FenHelper fenHelper;
-    private final int EVALUATION_DEPTH = 4;
+    Board board;
+    TranspositionTable tTable;
+    private final int EVALUATION_DEPTH = 5;
     private final int MAX_VALUE = 1000000000;
     private final int MIN_VALUE = -1000000000;
     public static int[] materialValue = {0, 100, 320, 330, 500, 900, 0};
 
-    public Evaluator() {
+    public Evaluator(Board board) { //TODO: rewrite it so it uses board as a class property
         moveGenerator = new MoveGenerator();
         moveCache = new HashMap<>();
         fenHelper = new FenHelper();
+        this.board = board;
+        tTable = board.tTable;
     }
 
-    public Move getBestMove(int colour, Board board) {
-        //check if current board has been already evaluated
-        String fenCode = fenHelper.ConvertBoardToFenCode(board);
-        List<Move> movesFromCache = moveCache.getOrDefault(fenCode, new ArrayList<>()); //TODO: is this map not gonna be too big?
-        if (!movesFromCache.isEmpty()) { //TODO: dont do it randomly
-            return movesFromCache.get(ThreadLocalRandom.current().nextInt(0, movesFromCache.size()));
-        }
-
+    public Move getBestMove(int colour) {
         List<Move> allMoves = moveGenerator.generateMoves(colour, board, false);
         allMoves = sort(null, allMoves, moveGenerator.opponentAttackMap, moveGenerator.opponentPawnAttackMap, board.getGameStage(), false, 0);
-        System.out.println(allMoves.size());
         List<Move> bestMoves = new ArrayList<>();
         int bestScore = MIN_VALUE;
 
         for (Move move : allMoves) {
             board.makeMove(move, true);
-            int score = -negamax(-colour, board, EVALUATION_DEPTH-1, 0, MIN_VALUE, MAX_VALUE);
+            int score = -negamax(-colour, EVALUATION_DEPTH-1, 1, MIN_VALUE, MAX_VALUE);
             board.unmakeMove(move);
             //System.out.println("From " + move.startSquare/8 + ", " + move.startSquare%8 + " to " + move.targetSquare/8 + ", " + move.targetSquare%8 + " - " + score);
 
@@ -54,19 +49,18 @@ public class Evaluator {
                 bestMoves.add(move);
                 bestScore = score;
             }
-
         }
-        //moveCache.put(fenCode, bestMoves);
 
-        //TODO: don't do it randomly, if capturing do it with the least value piece
-        return bestMoves.isEmpty() ? null : bestMoves.get(ThreadLocalRandom.current().nextInt(0, bestMoves.size()));
+        return bestMoves.isEmpty() ? null : bestMoves.get(0);
     }
 
-    private int negamax(int colour, Board board, int depth, int plyFromRoot, int alpha, int beta) {
+    private int negamax(int colour, int depth, int plyFromRoot, int alpha, int beta) {
+        int ttScore = tTable.lookupEvaluation(depth, plyFromRoot, alpha, beta);
+        if (ttScore != -1) {
+            return ttScore;
+        }
         if (depth == 0) {
-            return evaluateBoard(colour, board);
-            //TODO: instead of evaluating board immediately, start Quiescence search to get to a quiet position
-            //return quiescenceNegamax(colour, board, alpha, beta);
+            return quiescenceNegamax(colour, 3, alpha, beta);
         }
 
         List<Move> allMoves = moveGenerator.generateMoves(colour, board, false);
@@ -76,35 +70,45 @@ public class Evaluator {
             }
             return 0; //TODO: add a penalty for a draw
         }
-        //if is in check, return penalty for being in check
 
+        int evaluationBound = tTable.upperBound;
+        Move bestMove = allMoves.getFirst();
         for (Move move : allMoves) {
             board.makeMove(move, true);
-            int score = -negamax(-colour, board, depth - 1, plyFromRoot + 1, -beta, -alpha);
+            int score = -negamax(-colour, depth - 1, plyFromRoot + 1, -beta, -alpha);
             board.unmakeMove(move);
 
             // Move was *too* good, opponent will choose a different move earlier on to avoid this position.
             // (Beta-cutoff / Fail high)
             if (score >= beta) {
+                tTable.storeEvaluation(depth, plyFromRoot, beta, tTable.lowerBound, move);
                 return beta;
             }
-            alpha = Math.max(alpha, score);
+            if(score > alpha) {
+                evaluationBound = tTable.exact;
+                bestMove = move;
+                alpha = score;
+            }
         }
+        tTable.storeEvaluation(depth, plyFromRoot, alpha, evaluationBound, bestMove); //TODO: should i delete bestMove from storing
         return alpha;
     }
 
     // Search capture moves until a 'quiet' position is reached.
-    private int quiescenceNegamax(int colour, Board board, int alpha, int beta) {
-        int evaluation = evaluateBoard(colour, board);
+    private int quiescenceNegamax(int colour, int depth, int alpha, int beta) {
+        int evaluation = evaluateBoard(colour);
         if (evaluation >= beta) {
             return beta;
+        }
+        if(depth == 0) {
+            return evaluation;
         }
         alpha = Math.max(alpha, evaluation);
         List<Move> allMoves = moveGenerator.generateMoves(colour, board, true);
         allMoves = sort(null, allMoves, moveGenerator.opponentAttackMap, moveGenerator.opponentPawnAttackMap, board.getGameStage(), true, 0);
         for (Move move : allMoves) {
             board.makeMove(move, true);
-            int score = -quiescenceNegamax(-colour, board, -beta, -alpha);
+            int score = -quiescenceNegamax(-colour, depth - 1, -beta, -alpha);
             board.unmakeMove(move);
 
             if (score >= beta) {
@@ -115,7 +119,7 @@ public class Evaluator {
         return alpha;
     }
 
-    private int evaluateBoard(int colour, Board board) {
+    private int evaluateBoard(int colour) {
         int score = 0;
         int gameStage = board.getGameStage();
         score += getMaterialScore(board.getMaterial());
@@ -123,8 +127,7 @@ public class Evaluator {
             if (board.square[i] == 0) {
                 continue;
             }
-            score += getMaterialScore(board.square[i]); //TODO should there be any weights
-            score += getPositionScore(board.square[i], i, gameStage);
+            score += getPositionScore(board.square[i], i, gameStage); //TODO: reimplement position score to update it when making and unmaking moves
         }
         score += getCheckingScore(colour, gameStage, board);
         return score * colour;
