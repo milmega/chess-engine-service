@@ -81,7 +81,6 @@ public class Board {
         gameStage = GAME_START;
         // 0 - white, 1 - black = skip | pawns | knights | bishops | rooks | queens | king
         material = new int[][] {{0, 8, 2, 2, 2, 1, 1}, {0, 8, 2, 2, 2, 1, 1}};
-        positionScore = new int[] {-95, -95};
         zobristKey = Zobrist.createZobristKey(this);
     }
 

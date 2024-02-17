@@ -64,6 +64,7 @@ public class Evaluator {
         }
 
         List<Move> allMoves = moveGenerator.generateMoves(colour, false);
+        allMoves = sort(null, allMoves, moveGenerator.opponentAttackMap, moveGenerator.opponentPawnAttackMap, board.getGameStage(), false, 0);
         if (allMoves.isEmpty()) {
             if (moveGenerator.isKingInCheck()) {
                 return MIN_VALUE + plyFromRoot; // if there are more ways to get a mate it prevents mate in the quickest way.
@@ -100,10 +101,10 @@ public class Evaluator {
         if (evaluation >= beta) {
             return beta;
         }
-        if(depth == 0) {
-            return evaluation;
-        }
         alpha = Math.max(alpha, evaluation);
+        if(depth == 0) {
+            return alpha;
+        }
         List<Move> allMoves = moveGenerator.generateMoves(colour, true);
         allMoves = sort(null, allMoves, moveGenerator.opponentAttackMap, moveGenerator.opponentPawnAttackMap, board.getGameStage(), true, 0);
         for (Move move : allMoves) {
