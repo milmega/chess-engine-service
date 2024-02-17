@@ -123,12 +123,14 @@ public class Evaluator {
         int score = 0;
         int gameStage = board.getGameStage();
         score += getMaterialScore(board.getMaterial());
+        int positionScore = 0;
         for (int i = 0; i < board.square.length; i++) {
             if (board.square[i] == 0) {
                 continue;
             }
-            score += getPositionScore(board.square[i], i, gameStage); //TODO: reimplement position score to update it when making and unmaking moves
+            positionScore += getPositionScore(board.square[i], i, gameStage);
         }
+        score += positionScore;
         score += getCheckingScore(colour, gameStage);
         return score * colour;
     }

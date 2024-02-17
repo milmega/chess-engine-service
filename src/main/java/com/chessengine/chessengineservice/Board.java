@@ -7,15 +7,13 @@ import java.util.List;
 import java.util.Stack;
 
 import static com.chessengine.chessengineservice.Helpers.BoardHelper.*;
+import static com.chessengine.chessengineservice.Helpers.EvaluatorHelper.*;
 import static com.chessengine.chessengineservice.Helpers.Zobrist.pieceToIndex;
 import static com.chessengine.chessengineservice.MoveGenerator.PrecomputedMoveData.precomputeMoveData;
 import static com.chessengine.chessengineservice.Piece.*;
 import static java.lang.Math.abs;
 
 public class Board {
-    private final int GAME_START = 0;
-    private final int GAME_MIDDLE = 1;
-    private final int GAME_END = 2;
     private final Stack<GameDetails> gameDetailsStack;
     public final MoveGenerator moveGenerator;
     public final Bitboard bitboard;
@@ -83,6 +81,7 @@ public class Board {
         gameStage = GAME_START;
         // 0 - white, 1 - black = skip | pawns | knights | bishops | rooks | queens | king
         material = new int[][] {{0, 8, 2, 2, 2, 1, 1}, {0, 8, 2, 2, 2, 1, 1}};
+        positionScore = new int[] {-95, -95};
         zobristKey = Zobrist.createZobristKey(this);
     }
 
@@ -117,7 +116,7 @@ public class Board {
         int colourIndex = move.colour > 0 ? 0 : 1;
 
         if (unmakeMove) {
-            gameDetailsStack.push(new GameDetails(move, zobristKey, castlingRights, enPassantColumn, gameStage, fullMoveCount, movesSinceCaptureOrPawnMove, captures, material));
+            gameDetailsStack.push(new GameDetails(move, zobristKey, castlingRights, enPassantColumn, gameStage, fullMoveCount, movesSinceCaptureOrPawnMove, captures, material/*, positionScore*/));
         }
         enPassantColumn = 8; // columns are from 0 to 7 so for the zobrist key index 8 implies no enPassant
 

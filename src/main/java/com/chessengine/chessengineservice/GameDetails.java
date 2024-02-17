@@ -23,6 +23,5 @@ public class GameDetails {
         this.movesSinceCaptureOrPawnMove = movesSinceCaptureOrPawnMove;
         this.captures = captures;
         this.material = getDeepCopy(material);
-
     }
 }

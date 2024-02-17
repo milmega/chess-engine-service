@@ -2,8 +2,12 @@ package com.chessengine.chessengineservice.Helpers;
 
 import static com.chessengine.chessengineservice.Piece.*;
 import static com.chessengine.chessengineservice.Piece.KING;
+import static java.lang.Math.abs;
 
 public class EvaluatorHelper {
+    public static final int GAME_START = 0;
+    public static final int GAME_MIDDLE = 1;
+    public static final int GAME_END = 2;
 
     public static final int[] WHITE_PAWN_TABLE = {
             0, 0, 0, 0, 0, 0, 0, 0,
