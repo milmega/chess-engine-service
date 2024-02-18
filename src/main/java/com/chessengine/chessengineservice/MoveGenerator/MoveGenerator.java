@@ -472,7 +472,7 @@ public class MoveGenerator {
                 Pair<Integer, Long> plsbResult = popLeastSignificantBit(enPassantAttackingPawns);
                 int startSquare = plsbResult.first;
                 enPassantAttackingPawns = plsbResult.second;
-                int targetSquare = startSquare - pushOffset -1;
+                int targetSquare = startSquare - pushOffset - 1;
                 if (startSquare == lastMove.targetSquare + 1 && !isInCheckAfterenPassant(startSquare, targetSquare, lastMove.targetSquare)) {
                     Move move = new Move(piece, startSquare, targetSquare, board.square[targetSquare]);
                     move.enPassantFlag = true;

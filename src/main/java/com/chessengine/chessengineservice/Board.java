@@ -115,7 +115,7 @@ public class Board {
         int colourIndex = move.colour > 0 ? 0 : 1;
 
         if (unmakeMove) {
-            gameDetailsStack.push(new GameDetails(move, zobristKey, castlingRights, enPassantColumn, gameStage, fullMoveCount, movesSinceCaptureOrPawnMove, captures, material/*, positionScore*/));
+            gameDetailsStack.push(new GameDetails(move, zobristKey, castlingRights, enPassantColumn, gameStage, fullMoveCount, movesSinceCaptureOrPawnMove, captures, material));
         }
         enPassantColumn = 8; // columns are from 0 to 7 so for the zobrist key index 8 implies no enPassant
 

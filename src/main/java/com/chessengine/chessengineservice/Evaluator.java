@@ -9,6 +9,8 @@ import java.util.List;
 
 import static com.chessengine.chessengineservice.Helpers.EvaluatorHelper.getPositionScore;
 import static com.chessengine.chessengineservice.MoveSorter.sort;
+import static com.chessengine.chessengineservice.Piece.PAWN;
+import static java.lang.Math.abs;
 
 public class Evaluator {
 
@@ -18,9 +20,10 @@ public class Evaluator {
     Board board;
     TranspositionTable tTable;
     private final int EVALUATION_DEPTH = 5;
-    private final int QSEARCH_DEPTH = 3;
+    private final int QSEARCH_DEPTH = 4;
     private final int MAX_VALUE = 1000000000;
     private final int MIN_VALUE = -1000000000;
+    public final int maxNumOfExtensions = 2;
     public static int[] materialValue = {0, 100, 320, 330, 500, 900, 0};
 
     public Evaluator(Board board) {
@@ -39,7 +42,7 @@ public class Evaluator {
 
         for (Move move : allMoves) {
             board.makeMove(move, true);
-            int score = -negamax(-colour, EVALUATION_DEPTH-1, 1, MIN_VALUE, MAX_VALUE);
+            int score = -negamax(-colour, EVALUATION_DEPTH-1, 1, MIN_VALUE, MAX_VALUE, 0);
             board.unmakeMove(move);
             //System.out.println("From " + move.startSquare/8 + ", " + move.startSquare%8 + " to " + move.targetSquare/8 + ", " + move.targetSquare%8 + " - " + score);
 
@@ -54,7 +57,7 @@ public class Evaluator {
         return bestMoves.isEmpty() ? null : bestMoves.get(0);
     }
 
-    private int negamax(int colour, int depth, int plyFromRoot, int alpha, int beta) {
+    private int negamax(int colour, int depth, int plyFromRoot, int alpha, int beta, int numOfExtensions) {
         int ttScore = tTable.lookupEvaluation(depth, plyFromRoot, alpha, beta);
         if (ttScore != -1) {
             return ttScore;
@@ -74,13 +77,33 @@ public class Evaluator {
 
         int evaluationBound = tTable.upperBound;
         Move bestMove = allMoves.getFirst();
-        for (Move move : allMoves) {
+        for (int i = 0; i < allMoves.size(); i++) {
+            Move move = allMoves.get(i);
             board.makeMove(move, true);
-            int score = -negamax(-colour, depth - 1, plyFromRoot + 1, -beta, -alpha);
+
+            boolean isCapture = board.square[move.targetSquare] != 0;
+            int extension = 0;
+            if(numOfExtensions < maxNumOfExtensions) {
+                if(moveGenerator.isKingInCheck() || (abs(move.piece) == PAWN && (move.toX == 1 || move.toX == 6))) {
+                    extension = 1;
+                }
+            }
+            boolean fullSearch = true;
+            int score = 0;
+            if (extension == 0 && depth >= 3 && i >= 3 && !isCapture) { // Reduce the depth of the search for moves later in the move list as these are less likely to be good (assuming our move ordering isn't terrible)
+                int reduceDepth = 1;
+                score = -negamax(-colour, depth - 1 - reduceDepth, plyFromRoot + 1, -alpha - 1, -alpha, numOfExtensions);
+                // If the evaluation is better than expected, we'd better to a full-depth search to get a more accurate evaluation
+                fullSearch = score > alpha;
+            }
+            if (fullSearch) {
+                score = -negamax(-colour, depth - 1 + extension, plyFromRoot + 1, -beta, -alpha, numOfExtensions + extension);
+            }
+
+            //int score = -negamax(-colour, depth - 1, plyFromRoot + 1, -beta, -alpha, numOfExtentions);
             board.unmakeMove(move);
 
-            // Move was *too* good, opponent will choose a different move earlier on to avoid this position.
-            // (Beta-cutoff / Fail high)
+            // (Beta-cutoff / Fail high) Move was *too* good, opponent will choose a different move earlier on to avoid this position.
             if (score >= beta) {
                 tTable.storeEvaluation(depth, plyFromRoot, beta, tTable.lowerBound, move);
                 return beta;
@@ -124,14 +147,12 @@ public class Evaluator {
         int score = 0;
         int gameStage = board.getGameStage();
         score += getMaterialScore(board.getMaterial());
-        int positionScore = 0;
         for (int i = 0; i < board.square.length; i++) {
             if (board.square[i] == 0) {
                 continue;
             }
-            positionScore += getPositionScore(board.square[i], i, gameStage);
+            score += getPositionScore(board.square[i], i, gameStage);
         }
-        score += positionScore;
         score += getCheckingScore(colour, gameStage);
         return score * colour;
     }
