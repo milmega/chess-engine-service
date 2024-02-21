@@ -1,5 +1,6 @@
 package com.chessengine.chessengineservice;
 
+import com.chessengine.chessengineservice.Helpers.PGNHelper;
 import com.chessengine.chessengineservice.Helpers.Zobrist;
 import com.chessengine.chessengineservice.MoveGenerator.MoveGenerator;
 import java.util.ArrayList;
@@ -20,6 +21,7 @@ public class Board {
     public int[] square;
     public long zobristKey;
     public TranspositionTable tTable;
+    public String pgnCode;
     private int[][] material;
     private int colourToMove;
     private int whiteKingPosition;
@@ -81,6 +83,7 @@ public class Board {
         gameStage = GAME_START;
         // 0 - white, 1 - black = skip | pawns | knights | bishops | rooks | queens | king
         material = new int[][] {{0, 8, 2, 2, 2, 1, 1}, {0, 8, 2, 2, 2, 1, 1}};
+        pgnCode = "";
         zobristKey = Zobrist.createZobristKey(this);
     }
 
@@ -116,6 +119,8 @@ public class Board {
 
         if (unmakeMove) {
             gameDetailsStack.push(new GameDetails(move, zobristKey, castlingRights, enPassantColumn, gameStage, fullMoveCount, movesSinceCaptureOrPawnMove, captures, material));
+        } else {
+            pgnCode += PGNHelper.convertMoveToPGN(move);
         }
         enPassantColumn = 8; // columns are from 0 to 7 so for the zobrist key index 8 implies no enPassant
 
