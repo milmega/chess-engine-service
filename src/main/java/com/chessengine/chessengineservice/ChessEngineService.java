@@ -71,7 +71,9 @@ public class ChessEngineService {
             return gameById.get(gameId).lastMove;
         } else {
             System.out.println("Getting last move: Game with id: " + gameId + " does not exist");
-            return new Move(0, 0, 0, 0);
+            Move move = new Move(0, 0, 0, 0);
+            move.gameResult = 6;
+            return move;
         }
 
     }
@@ -114,6 +116,10 @@ public class ChessEngineService {
             System.out.println("Getting game result: Game with id: " + id + " does not exist");
         }
         return 0;
+    }
+
+    public boolean isGameLive(int id) {
+        return gameById.containsKey(id);
     }
 
     public void resetGame(int id) {

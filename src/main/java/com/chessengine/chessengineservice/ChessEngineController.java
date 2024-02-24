@@ -38,6 +38,13 @@ public class ChessEngineController {
         return chessEngineService.getLastMove(gameId);
     }
 
+    @GetMapping("/isGameLive")
+    @CrossOrigin(origins = "http://localhost:3000")
+    public boolean isGameLive(@RequestParam int gameId) {
+        return chessEngineService.isGameLive(gameId);
+    }
+
+
     @PostMapping("/reset")
     @CrossOrigin(origins = "http://localhost:3000")
     public void reset(@RequestParam int id) {
