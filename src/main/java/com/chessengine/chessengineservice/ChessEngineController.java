@@ -10,26 +10,43 @@ public class ChessEngineController {
 
     @GetMapping("/move")
     @CrossOrigin(origins = "http://localhost:3000")
-    public Move getBestMove(@RequestParam int colour) {
-        return chessEngineService.getBestMove(colour);
+    public Move getBestMove(@RequestParam int id, @RequestParam int colour) {
+        return chessEngineService.getBestMove(id, colour);
     }
 
     @GetMapping("/allMoves")
     @CrossOrigin(origins = "http://localhost:3000")
-    public @ResponseBody List<Move> getAllMoves(@RequestParam int colour) {
-        return chessEngineService.getAllMoves(colour);
+    public @ResponseBody List<Move> getAllMoves(@RequestParam int id, @RequestParam int colour) {
+        return chessEngineService.getAllMoves(id, colour);
     }
 
     @PostMapping("/makeMove")
     @CrossOrigin(origins = "http://localhost:3000")
-    public int makeMove(@RequestBody Move move) {
-        chessEngineService.getBoard().makeMove(move, false);
-        return chessEngineService.getBoard().getGameResult(-move.colour);
+    public int makeMove(@RequestParam int id, @RequestBody Move move) {
+        return chessEngineService.makeMove(id, move);
+    }
+
+    @GetMapping("/newGame")
+    @CrossOrigin(origins = "http://localhost:3000")
+    public int startNewGame(@RequestParam int colour, @RequestParam int playerId) {
+        return chessEngineService.createGameOrJoinQueue(colour, playerId);
+    }
+
+    @GetMapping("/fetchMove")
+    @CrossOrigin(origins = "http://localhost:3000")
+    public Move getLastMove(@RequestParam int gameId) {
+        return chessEngineService.getLastMove(gameId);
     }
 
     @PostMapping("/reset")
     @CrossOrigin(origins = "http://localhost:3000")
     public void reset() {
         chessEngineService.reset();
+    }
+
+    @GetMapping("/generateId")
+    @CrossOrigin(origins = "http://localhost:3000")
+    public int generateId() {
+        return chessEngineService.generatePlayerId();
     }
 }

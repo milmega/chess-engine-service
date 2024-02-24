@@ -11,9 +11,6 @@ import static com.chessengine.chessengineservice.Helpers.BoardHelper.*;
 import static com.chessengine.chessengineservice.MoveGenerator.PrecomputedMoveData.*;
 import static com.chessengine.chessengineservice.Piece.*;
 
-//TODO: implement opening tree
-//TODO: implement endgaame
-
 public class MoveGenerator {
 
     final long MAX_LONG = 0xFFFFFFFFFFFFFFFFL;
