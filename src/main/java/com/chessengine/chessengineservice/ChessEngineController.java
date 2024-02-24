@@ -42,6 +42,12 @@ public class ChessEngineController {
     @CrossOrigin(origins = "http://localhost:3000")
     public void reset() {
         chessEngineService.reset();
+    public void reset(@RequestParam int id) {
+        if(id == 0) {
+            chessEngineService.resetGame(id);
+        } else {
+            chessEngineService.deleteGame(id);
+        }
     }
 
     @GetMapping("/generateId")

@@ -21,17 +21,6 @@ public class ChessEngineService {
         blackQueue = new ConcurrentLinkedQueue<>();
     }
 
-    public Move getBestMove(int colour) {
-        Move bestMove = evaluator.getBestMove(colour, board);
-        if (useOpeningDB){
-            List<Move> allMoves = getAllMoves(colour);
-            Move moveFromDB = openingDatabase.getNextMove(board.pgnCode, allMoves);
-            if(moveFromDB == null) {
-                useOpeningDB = false;
-            } else {
-                board.makeMove(moveFromDB, false);
-                return moveFromDB;
-            }
     public int generatePlayerId() {
         _playerID++;
         return _playerID;
