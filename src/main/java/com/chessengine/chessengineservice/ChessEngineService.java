@@ -1,9 +1,12 @@
 package com.chessengine.chessengineservice;
 
+import org.springframework.stereotype.Service;
+
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
+@Service
 public class ChessEngineService {
     Map<Integer, Game> gameById;
     Map<Integer, Integer> gameByPlayerId;
@@ -120,6 +123,11 @@ public class ChessEngineService {
 
     public boolean isGameLive(int id) {
         return gameById.containsKey(id);
+    }
+
+    public void cancelSearch(int playerId) {
+        whiteQueue.remove(playerId);
+        blackQueue.remove(playerId);
     }
 
     public void resetGame(int id) {

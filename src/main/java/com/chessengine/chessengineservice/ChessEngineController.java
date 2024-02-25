@@ -44,6 +44,12 @@ public class ChessEngineController {
         return chessEngineService.isGameLive(gameId);
     }
 
+    @PostMapping("/cancelSearch")
+    @CrossOrigin(origins = "http://localhost:3000")
+    public void cancelSearch(@RequestParam int id) {
+        chessEngineService.cancelSearch(id);
+    }
+
 
     @PostMapping("/reset")
     @CrossOrigin(origins = "http://localhost:3000")
