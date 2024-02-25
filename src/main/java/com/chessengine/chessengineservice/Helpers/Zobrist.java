@@ -29,7 +29,7 @@ public class Zobrist {
     }
 
     public static int pieceToIndex(int piece) {
-        if(piece > 0) {
+        if (piece > 0) {
             return piece;
         }
         return 8-piece; // converting piece value to index (white from 1 to 6, black from 9 to 14)
@@ -54,10 +54,10 @@ public class Zobrist {
         Random rng = new Random(seed);
 
         for (int squareIndex = 0; squareIndex < 64; squareIndex++) {
-            for(int piece = 1; piece < 7; piece++) {
+            for (int piece = 1; piece < 7; piece++) {
                 piecesArray[piece][squareIndex] = random64BitNumber(rng);
             }
-            for(int piece = 9; piece < 15; piece++) {
+            for (int piece = 9; piece < 15; piece++) {
                 piecesArray[piece][squareIndex] = random64BitNumber(rng);
             }
         }

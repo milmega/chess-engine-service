@@ -19,13 +19,13 @@ public class PGNHelper {
 
     public static Move convertPGNToMove(String pgn, List<Move> moves) {
         int piece = pgn.length() == 2 ? PAWN : getPieceFromLetter(pgn.substring(0, 1));
-        if(pgn.length() == 2) {
+        if (pgn.length() == 2) {
             pgn = "0" + pgn;
         }
         int targetX = 8 - (pgn.charAt(2) - '0');
         int targetY = pgn.charAt(1) - 'a';
         for (Move move : moves) {
-            if(abs(move.piece) == piece && move.toX == targetX && move.toY == targetY) {
+            if (abs(move.piece) == piece && move.toX == targetX && move.toY == targetY) {
                 return move;
             }
         }
@@ -34,9 +34,9 @@ public class PGNHelper {
 
     private static char getPieceLetter(int piece) {
         piece = abs(piece);
-        if(piece == KNIGHT) {
+        if (piece == KNIGHT) {
             return 'N';
-        } else if(piece == BISHOP) {
+        } else if (piece == BISHOP) {
             return 'B';
         } else if (piece == QUEEN) {
             return 'Q';

@@ -87,16 +87,16 @@ public class Bitboard {
 
         for (int dir = 0; dir < 4; dir++) {
             // pawn attacks
-            if(areCoorsValid(x - 1, y + 1)) {
+            if (areCoorsValid(x - 1, y + 1)) {
                 whitePawnAttacks[square] |= 1L << 63 -  coorsToPos(x - 1, y + 1);
             }
-            if(areCoorsValid(x - 1, y - 1)) {
+            if (areCoorsValid(x - 1, y - 1)) {
                 whitePawnAttacks[square] |= 1L << 63 -  coorsToPos(x - 1, y - 1);
             }
-            if(areCoorsValid(x + 1, y + 1)) {
+            if (areCoorsValid(x + 1, y + 1)) {
                 blackPawnAttacks[square] |= 1L << 63 -  coorsToPos(x + 1, y + 1);
             }
-            if(areCoorsValid(x + 1, y - 1)) {
+            if (areCoorsValid(x + 1, y - 1)) {
                 blackPawnAttacks[square] |= 1L << 63 -  coorsToPos(x + 1, y - 1);
             }
 
@@ -104,7 +104,7 @@ public class Bitboard {
             for (Pair<Integer, Integer> move : knightMoves) {
                 int newX = x + move.first;
                 int newY = y + move.second;
-                if(areCoorsValid(newX, newY)) {
+                if (areCoorsValid(newX, newY)) {
                     knightAttacks[square] |= 1L << 63 - coorsToPos(newX, newY);
                 }
             }
@@ -116,13 +116,13 @@ public class Bitboard {
                 int newDiagX = x + diagMoves[dir].first * distance;
                 int newDiagY = y + diagMoves[dir].second * distance;
 
-                if(areCoorsValid(newOrthoX, newOrthoY)) {
-                    if(distance == 1) {
+                if (areCoorsValid(newOrthoX, newOrthoY)) {
+                    if (distance == 1) {
                         kingMoves[square] |= 1L << 63 - coorsToPos(newOrthoX, newOrthoY);
                     }
                 }
-                if(areCoorsValid(newDiagX, newDiagY)) {
-                    if(distance == 1) {
+                if (areCoorsValid(newDiagX, newDiagY)) {
+                    if (distance == 1) {
                         kingMoves[square] |= 1L << 63 - coorsToPos(newDiagX, newDiagY);
                     }
                 }

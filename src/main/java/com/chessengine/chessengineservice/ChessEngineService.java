@@ -30,18 +30,18 @@ public class ChessEngineService {
     }
 
     public int createGameOrJoinQueue(int colour, int playerId) {
-        if(gameByPlayerId.containsKey(playerId)) {
+        if (gameByPlayerId.containsKey(playerId)) {
             return gameByPlayerId.get(playerId);
         }
-        if(colour == 1) {
+        if (colour == 1) {
             if (!blackQueue.isEmpty()) {
                 int opponentId = blackQueue.poll();
                 createGame(playerId, opponentId);
                 return _gameId;
-            } else if(!whiteQueue.contains(playerId)){
+            } else if (!whiteQueue.contains(playerId)){
                 whiteQueue.add(playerId);
             }
-        } else if(colour == -1) {
+        } else if (colour == -1) {
             if (!whiteQueue.isEmpty()) {
                 int opponentId = whiteQueue.poll();
                 createGame(playerId, opponentId);
@@ -62,7 +62,8 @@ public class ChessEngineService {
     }
 
     public void deleteGame(int id) {
-        if(gameById.containsKey(id)) {
+        if (gameById.containsKey(id)) {
+            System.out.println("deleting game with id: " + id);
             Game game = gameById.remove(id);
             gameByPlayerId.remove(game.playerId);
             gameByPlayerId.remove(game.opponentId);
@@ -70,7 +71,7 @@ public class ChessEngineService {
     }
 
     public Move getLastMove(int gameId) {
-        if(gameById.containsKey(gameId)) {
+        if (gameById.containsKey(gameId)) {
             return gameById.get(gameId).lastMove;
         } else {
             System.out.println("Getting last move: Game with id: " + gameId + " does not exist");

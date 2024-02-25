@@ -28,7 +28,7 @@ public class Game {
         if (useOpeningDB){
             List<Move> allMoves = getAllMoves(colour);
             Move moveFromDB = openingDatabase.getNextMove(board.pgnCode, allMoves);
-            if(moveFromDB == null) {
+            if (moveFromDB == null) {
                 useOpeningDB = false;
             } else {
                 board.makeMove(moveFromDB, false);
@@ -38,6 +38,7 @@ public class Game {
 
         Move bestMove = evaluator.getBestMove(colour);
         if(bestMove != null) {
+        if (bestMove != null) {
             board.makeMove(bestMove, false);
         } else {
             bestMove = new Move(0, 0, 0, 0);

@@ -235,34 +235,34 @@ public class Board {
 
     // checks if it is a draw, return 0 if not a draw, otherwise returns a draw reason
     public int getDrawResult() {
-        if(isDrawByInsufficientMaterial()) {
+        if (isDrawByInsufficientMaterial()) {
             return 2;
         }
-        if(isDrawBy3foldRepetition()) {
+        if (isDrawBy3foldRepetition()) {
             return 3;
         }
-        if(isDrawBy50MovesRule()) {
+        if (isDrawBy50MovesRule()) {
             return 4;
         }
         return 0;
     }
 
     private boolean isDrawByInsufficientMaterial() {
-        if((material[0][1] | material[0][4] | material[0][5] | material[1][1] | material[1][4] | material[1][5]) > 0) { // if any side has pawns, rooks or queen, it is not a draw
+        if ((material[0][1] | material[0][4] | material[0][5] | material[1][1] | material[1][4] | material[1][5]) > 0) { // if any side has pawns, rooks or queen, it is not a draw
             return false;
         }
-        if((material[0][2] | material[0][3] | material[1][2] | material[1][3]) == 0) { //if only 2 kings left, it is a draw
+        if ((material[0][2] | material[0][3] | material[1][2] | material[1][3]) == 0) { //if only 2 kings left, it is a draw
             return true;
         }
-        if(((material[0][2] | material[0][3]) == 1 && (material[1][2] | material[1][3]) == 0) ||
+        if (((material[0][2] | material[0][3]) == 1 && (material[1][2] | material[1][3]) == 0) ||
                 ((material[0][2] | material[0][3]) == 0 && (material[1][2] | material[1][3]) == 1)) { //if one side has one knight/bishop and the other one has only king, it's a draw
             return true;
         }
-        if((material[0][2] == 1 && material[0][3] == 0 && material[1][2] == 0 && material[1][3] == 1) ||
+        if ((material[0][2] == 1 && material[0][3] == 0 && material[1][2] == 0 && material[1][3] == 1) ||
                 (material[0][2] == 0 && material[0][3] == 1 && material[1][2] == 1 && material[1][3] == 0)) { // if one side has a knight and the other one has a bishop
             return true;
         }
-        if(material[0][2] == 0 && material[0][3] == 1 && material[1][2] == 0 && material[1][3] == 1) { //if both sides have a bishop - check if on the same colour
+        if (material[0][2] == 0 && material[0][3] == 1 && material[1][2] == 0 && material[1][3] == 1) { //if both sides have a bishop - check if on the same colour
         int whiteBishop = Long.numberOfLeadingZeros(bitboard.pieces[0][BISHOP]);
         int whiteBishopRow = posToX(whiteBishop);
         int whiteBishopColumn = posToY(whiteBishop);
@@ -277,7 +277,7 @@ public class Board {
     }
 
     private boolean isDrawBy3foldRepetition() {
-        if(moveHistory.size() < 8) {
+        if (moveHistory.size() < 8) {
             return false;
         }
         Move[] last8Moves = moveHistory.subList(moveHistory.size() - 8, moveHistory.size()).toArray(new Move[0]);
@@ -360,7 +360,7 @@ public class Board {
         square[start] = 0;
         bitboard.toggleSquares(piece, start, target);
         if (targetPiece != 0) {
-            if(unmake) {
+            if (unmake) {
                 square[start] = targetPiece;
                 bitboard.toggleSquare(targetPiece, start);
             } else {

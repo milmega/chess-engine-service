@@ -76,7 +76,7 @@ public class MoveSorter {
     }
 
     static void quickSort(Move[] moves, int left, int right) {
-        if(left < right) {
+        if (left < right) {
             int pivot = partition(moves, left, right);
             quickSort(moves, left, pivot - 1);
             quickSort(moves, pivot + 1, right);

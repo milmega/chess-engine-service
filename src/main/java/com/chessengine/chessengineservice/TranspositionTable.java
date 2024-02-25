@@ -15,7 +15,7 @@ public class TranspositionTable {
     public int exact = 0;
     public int lowerBound = 1;
     public int upperBound = 2;
-    boolean disabled = false;
+    public boolean disabled = true; //make it private
     boolean useMap = false; // TODO: delete it later when decided if map is better than array
 
     public TranspositionTable(Board board) {
@@ -33,11 +33,11 @@ public class TranspositionTable {
     }
 
     public int lookupEvaluation(int depth, int plyFromRoot, int alpha, int beta) {
-        if(disabled) {
+        if (disabled) {
             return -1;
         }
         TTEntry entry;
-        if(useMap){
+        if (useMap){
             String key = Long.toBinaryString(board.zobristKey);
             entry = entriesMap.get(key);
         } else {
@@ -60,10 +60,10 @@ public class TranspositionTable {
     }
 
     public void storeEvaluation(int depth, int numPlySearched, int eval, int evalType, Move move) {
-        if(disabled) {
+        if (disabled) {
             return;
         }
-        if(useMap) {
+        if (useMap) {
             String key = Long.toBinaryString(board.zobristKey);
             TTEntry entry = new TTEntry(board.zobristKey, correctMateScoreForStorage(eval, numPlySearched), (byte)depth, (byte)evalType, move);
             entriesMap.put(key, entry);

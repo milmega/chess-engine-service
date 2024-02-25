@@ -17,8 +17,8 @@ public class OpeningDatabase {
     }
 
     public Move getNextMove(String pgn, List<Move> allMoves) {
-        for(String opening : openingBook) {
-            if(opening.startsWith(pgn)) {
+        for (String opening : openingBook) {
+            if (opening.startsWith(pgn)) {
                 String nextMove = opening.substring(pgn.length()).split(" ")[0];
                 return PGNHelper.convertPGNToMove(nextMove, allMoves);
             }

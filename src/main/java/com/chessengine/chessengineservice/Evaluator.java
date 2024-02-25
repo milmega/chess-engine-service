@@ -83,8 +83,8 @@ public class Evaluator {
 
             boolean isCapture = board.square[move.targetSquare] != 0;
             int extension = 0;
-            if(numOfExtensions < maxNumOfExtensions) {
-                if(moveGenerator.isKingInCheck() || (abs(move.piece) == PAWN && (move.toX == 1 || move.toX == 6))) {
+            if (numOfExtensions < maxNumOfExtensions) {
+                if (moveGenerator.isKingInCheck() || (abs(move.piece) == PAWN && (move.toX == 1 || move.toX == 6))) {
                     extension = 1;
                 }
             }
@@ -108,7 +108,7 @@ public class Evaluator {
                 tTable.storeEvaluation(depth, plyFromRoot, beta, tTable.lowerBound, move);
                 return beta;
             }
-            if(score > alpha) {
+            if (score > alpha) {
                 evaluationBound = tTable.exact;
                 bestMove = move;
                 alpha = score;
@@ -125,7 +125,7 @@ public class Evaluator {
             return beta;
         }
         alpha = Math.max(alpha, evaluation);
-        if(depth == 0) {
+        if (depth == 0) {
             return alpha;
         }
         List<Move> allMoves = moveGenerator.generateMoves(colour, true);
