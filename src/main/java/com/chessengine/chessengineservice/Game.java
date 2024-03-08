@@ -8,7 +8,7 @@ public class Game {
     Evaluator evaluator;
     Board board;
     OpeningDatabase openingDatabase;
-    boolean useOpeningDB = false;
+    boolean useOpeningDB = true;
     public int gameId;
     public int playerId;
     public int opponentId;
@@ -37,7 +37,32 @@ public class Game {
         }
 
         Move bestMove = evaluator.getBestMove(colour);
-        if(bestMove != null) {
+        long endTime = System.currentTimeMillis();
+        sum += endTime - startTime;
+        minTime = Math.min(minTime, endTime-startTime);
+        maxTime = Math.max(maxTime, endTime-startTime);
+
+        //long startTimeTT = System.currentTimeMillis();
+        //evaluator.tTable.disabled = false;
+        //Move bestMoveTT = evaluator.getBestMove(colour);
+        //long endTimeTT = System.currentTimeMillis();
+        //sumTT += endTimeTT - startTimeTT;
+        //minTimeTT = Math.min(minTimeTT, endTimeTT-startTimeTT);
+        //maxTimeTT = Math.max(maxTimeTT, endTimeTT-startTimeTT);
+
+        count++;
+        System.out.println("elapsed time: " + (endTime-startTime)/* + " with TT: "+ (endTimeTT-startTimeTT)*/);
+        if (count == 5) {
+            System.out.println("min: " + minTime + " max: " + maxTime + " avg: " + (double)(sum/count)/* + " vs " + "min: " + minTimeTT + " max: " + maxTimeTT + " avg: " + (double)(sumTT/count)*/);
+            minTime = 1000000000;
+            maxTime = 0;
+            sum = 0;
+            //minTimeTT = 1000000000;
+            //maxTimeTT = 0;
+            //sumTT = 0;
+            count = 0;
+        }
+
         if (bestMove != null) {
             board.makeMove(bestMove, false);
         } else {

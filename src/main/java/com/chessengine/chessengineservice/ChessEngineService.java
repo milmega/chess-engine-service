@@ -26,6 +26,7 @@ public class ChessEngineService {
 
     public int generatePlayerId() {
         _playerID++;
+        System.out.println("Generating Id: " + _playerID);
         return _playerID;
     }
 
@@ -55,6 +56,7 @@ public class ChessEngineService {
 
     private void createGame(int playerId, int opponentId) {
         _gameId++;
+        System.out.println("Creating game between" + playerId + " and " + opponentId);
         Game game = new Game(_gameId, playerId, opponentId);
         gameById.put(_gameId, game);
         gameByPlayerId.put(playerId, _gameId);
@@ -63,7 +65,7 @@ public class ChessEngineService {
 
     public void deleteGame(int id) {
         if (gameById.containsKey(id)) {
-            System.out.println("deleting game with id: " + id);
+            System.out.println("Deleting game with id: " + id);
             Game game = gameById.remove(id);
             gameByPlayerId.remove(game.playerId);
             gameByPlayerId.remove(game.opponentId);
