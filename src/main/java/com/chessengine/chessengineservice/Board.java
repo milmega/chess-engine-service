@@ -229,6 +229,7 @@ public class Board {
         movesSinceCaptureOrPawnMove = gameDetails.movesSinceCaptureOrPawnMove;
         captures = gameDetails.captures;
         material = getDeepCopy(gameDetails.material);
+        gameStage = gameDetails.gameStage;
         colourToMove = -colourToMove;
         bitboard.updateBitboards();
     }
