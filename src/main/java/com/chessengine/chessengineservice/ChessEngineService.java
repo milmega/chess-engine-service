@@ -30,7 +30,11 @@ public class ChessEngineService {
         return _playerID;
     }
 
-    public int createGameOrJoinQueue(int colour, int playerId) {
+    public int createGameOrJoinQueue(int colour, int playerId, boolean online) {
+        if (!online) {
+           createGame(playerId, generatePlayerId());
+           return _gameId;
+        }
         if (gameByPlayerId.containsKey(playerId)) {
             return gameByPlayerId.get(playerId);
         }
