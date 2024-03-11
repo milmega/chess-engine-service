@@ -65,6 +65,7 @@ public class ChessEngineService {
         gameById.put(_gameId, game);
         gameByPlayerId.put(playerId, _gameId);
         gameByPlayerId.put(opponentId, _gameId);
+        game.whiteTimer.start();
     }
 
     public void deleteGame(int id) {
@@ -74,18 +75,6 @@ public class ChessEngineService {
             gameByPlayerId.remove(game.playerId);
             gameByPlayerId.remove(game.opponentId);
         }
-    }
-
-    public Move getLastMove(int gameId) {
-        if (gameById.containsKey(gameId)) {
-            return gameById.get(gameId).lastMove;
-        } else {
-            System.out.println("Getting last move: Game with id: " + gameId + " does not exist");
-            Move move = new Move(0, 0, 0, 0);
-            move.gameResult = 6;
-            return move;
-        }
-
     }
 
     public Move getBestMove(int id, int colour) {
@@ -112,6 +101,7 @@ public class ChessEngineService {
             game.getBoard().makeMove(move, false);
             move.gameResult = getGameResult(id, -move.colour);
             game.lastMove = move;
+            game.updateTimer(move.colour);
             return move.gameResult;
         } else {
             System.out.println("Making move: Game with id: " + id + " does not exist");
@@ -128,8 +118,18 @@ public class ChessEngineService {
         return 0;
     }
 
-    public boolean isGameLive(int id) {
-        return gameById.containsKey(id);
+    public GameState getGameUpdate(int gameId) {
+        if (gameById.containsKey(gameId)) {
+            Game game = gameById.get(gameId);
+            Move lastMove = game.lastMove;
+            int whiteTime = game.whiteTimer.getSecondsLeft();
+            int blackTime = game.blackTimer.getSecondsLeft();
+            return new GameState(true, lastMove, whiteTime, blackTime);
+        } else {
+            System.out.println("Getting game update: Game with id: " + gameId + " does not exist");
+            Move move = new Move(0, 0, 0, 0);
+            return new GameState(false, move, 0, 0);
+        }
     }
 
     public void cancelSearch(int playerId) {

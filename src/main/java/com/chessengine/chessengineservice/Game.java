@@ -13,6 +13,8 @@ public class Game {
     public int playerId;
     public int opponentId;
     public Move lastMove;
+    public TimerManager whiteTimer;
+    public TimerManager blackTimer;
 
     public Game(int gameId, int playerId, int opponentId) {
         board = new Board();
@@ -22,6 +24,8 @@ public class Game {
         this.playerId = playerId;
         this.opponentId = opponentId;
         this.lastMove = new Move(0, 0, 0, 0);
+        this.whiteTimer = new TimerManager();
+        this.blackTimer = new TimerManager();
     }
 
     public Move getBestMove(int colour) {
@@ -74,6 +78,16 @@ public class Game {
 
     public List<Move> getAllMoves(int colour) {
         return board.getAllMoves(colour);
+    }
+
+    public void updateTimer(int colour) {
+        if(colour > 0) {
+            whiteTimer.stop();
+            blackTimer.start();
+        } else {
+            blackTimer.stop();
+            whiteTimer.start();
+        }
     }
 
     public Board getBoard() {

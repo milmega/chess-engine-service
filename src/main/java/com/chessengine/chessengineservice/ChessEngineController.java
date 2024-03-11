@@ -32,16 +32,10 @@ public class ChessEngineController {
         return chessEngineService.createGameOrJoinQueue(colour, playerId, online);
     }
 
-    @GetMapping("/fetchMove")
+    @GetMapping("/fetchUpdate")
     @CrossOrigin
-    public Move getLastMove(@RequestParam int gameId) {
-        return chessEngineService.getLastMove(gameId);
-    }
-
-    @GetMapping("/isGameLive")
-    @CrossOrigin
-    public boolean isGameLive(@RequestParam int gameId) {
-        return chessEngineService.isGameLive(gameId);
+    public GameState fetchUpdate(@RequestParam int gameId) {
+        return chessEngineService.getGameUpdate(gameId);
     }
 
     @PostMapping("/cancelSearch")
