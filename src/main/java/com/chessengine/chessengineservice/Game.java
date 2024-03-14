@@ -18,7 +18,7 @@ public class Game {
 
     public Game(int gameId, int playerId, int opponentId) {
         board = new Board();
-        evaluator = new Evaluator(board);
+        evaluator = new Evaluator(board, level);
         openingDatabase = new OpeningDatabase();
         this.gameId = gameId;
         this.playerId = playerId;

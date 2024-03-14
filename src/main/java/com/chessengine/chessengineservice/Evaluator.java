@@ -19,16 +19,25 @@ public class Evaluator {
     FenHelper fenHelper;
     Board board;
     TranspositionTable tTable;
-    private final int EVALUATION_DEPTH = 5;
-    private final int QSEARCH_DEPTH = -1;
+    int level;
+    private int EVALUATION_DEPTH = 5;
+    private int QSEARCH_DEPTH = -1;
     private final int MAX_VALUE = 1000000000;
     private final int MIN_VALUE = -1000000000;
     private final boolean addExtension = false;
     public final int maxNumOfExtensions = 2;
     public static int[] materialValue = {0, 100, 320, 330, 500, 900, 0};
 
-    public Evaluator(Board board) {
+    public Evaluator(Board board, int level) {
         this.board = board;
+        this.level = level;
+        if(level == 1) {
+            EVALUATION_DEPTH = 2;
+            QSEARCH_DEPTH = 0;
+        } else if (level == 2) {
+            EVALUATION_DEPTH = 3;
+            QSEARCH_DEPTH = 2;
+        }
         moveGenerator = board.moveGenerator;
         moveCache = new HashMap<>();
         fenHelper = new FenHelper();
@@ -155,7 +164,9 @@ public class Evaluator {
             if (board.square[i] == 0) {
                 continue;
             }
-            score += getPositionScore(board.square[i], i, gameStage);
+            if(level != 1) { // if not set to easy level then evaluate position as well
+                score += getPositionScore(board.square[i], i, gameStage);
+            }
         }
         score += getCheckingScore(colour, gameStage);
         return score * colour;

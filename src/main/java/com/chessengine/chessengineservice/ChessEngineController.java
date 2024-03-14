@@ -28,8 +28,8 @@ public class ChessEngineController {
 
     @GetMapping("/newGame")
     @CrossOrigin
-    public int startNewGame(@RequestParam int colour, @RequestParam int playerId, @RequestParam boolean online) {
-        return chessEngineService.createGameOrJoinQueue(colour, playerId, online);
+    public int startNewGame(@RequestParam int colour, @RequestParam int playerId, @RequestParam int level, @RequestParam boolean online) {
+        return chessEngineService.createGameOrJoinQueue(colour, playerId, level, online);
     }
 
     @GetMapping("/fetchUpdate")

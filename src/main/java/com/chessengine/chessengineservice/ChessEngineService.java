@@ -18,7 +18,6 @@ public class ChessEngineService {
 
     public ChessEngineService() {
         gameById = new ConcurrentHashMap<>();
-        gameById.put(0, new Game(0, 0, 0));
         gameByPlayerId = new ConcurrentHashMap<>();
         whiteQueue = new ConcurrentLinkedQueue<>();
         blackQueue = new ConcurrentLinkedQueue<>();
@@ -30,9 +29,9 @@ public class ChessEngineService {
         return _playerID;
     }
 
-    public int createGameOrJoinQueue(int colour, int playerId, boolean online) {
+    public int createGameOrJoinQueue(int colour, int playerId, int level, boolean online) {
         if (!online) {
-           createGame(playerId, generatePlayerId());
+           createGame(playerId, generatePlayerId(), level);
            return _gameId;
         }
         if (gameByPlayerId.containsKey(playerId)) {
@@ -41,7 +40,7 @@ public class ChessEngineService {
         if (colour == 1) {
             if (!blackQueue.isEmpty()) {
                 int opponentId = blackQueue.poll();
-                createGame(playerId, opponentId);
+                createGame(playerId, opponentId, level);
                 return _gameId;
             } else if (!whiteQueue.contains(playerId)){
                 whiteQueue.add(playerId);
@@ -49,7 +48,7 @@ public class ChessEngineService {
         } else if (colour == -1) {
             if (!whiteQueue.isEmpty()) {
                 int opponentId = whiteQueue.poll();
-                createGame(playerId, opponentId);
+                createGame(playerId, opponentId, level);
                 return _gameId;
             } else if (!blackQueue.contains(playerId)) {
                 blackQueue.add(playerId);
@@ -58,10 +57,10 @@ public class ChessEngineService {
         return -1;
     }
 
-    private void createGame(int playerId, int opponentId) {
+    private void createGame(int playerId, int opponentId, int level) {
         _gameId++;
         System.out.println("Creating game between" + playerId + " and " + opponentId);
-        Game game = new Game(_gameId, playerId, opponentId);
+        Game game = new Game(_gameId, playerId, opponentId, level);
         gameById.put(_gameId, game);
         gameByPlayerId.put(playerId, _gameId);
         gameByPlayerId.put(opponentId, _gameId);
