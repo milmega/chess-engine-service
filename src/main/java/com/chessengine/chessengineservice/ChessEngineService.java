@@ -59,7 +59,7 @@ public class ChessEngineService {
 
     private void createGame(int playerId, int opponentId, int level) {
         _gameId++;
-        System.out.println("Creating game between" + playerId + " and " + opponentId);
+        System.out.println("Creating game between " + playerId + " and " + opponentId);
         Game game = new Game(_gameId, playerId, opponentId, level);
         gameById.put(_gameId, game);
         gameByPlayerId.put(playerId, _gameId);
@@ -78,7 +78,13 @@ public class ChessEngineService {
 
     public Move getBestMove(int id, int colour) {
         if (gameById.containsKey(id)) {
-           return gameById.get(id).getBestMove(colour);
+            Game game = gameById.get(id);
+            Move bestMove = game.getBestMove(colour);
+            if(gameById.containsKey(id)) { // double check if the game is still active after computing the move
+                return bestMove;
+            } else {
+                return null;
+            }
         } else {
             System.out.println("Getting best move: Game with id: " + id + " does not exist");
             return null;
