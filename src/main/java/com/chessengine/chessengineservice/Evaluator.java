@@ -47,7 +47,7 @@ public class Evaluator {
     public Move getBestMove(int colour) {
         List<Move> allMoves = moveGenerator.generateMoves(colour, false);
         allMoves = sort(null, allMoves, moveGenerator.opponentAttackMap, moveGenerator.opponentPawnAttackMap, board.getGameStage(), false, 0);
-        List<Move> bestMoves = new ArrayList<>();
+        Move bestMove = null;
         int bestScore = MIN_VALUE;
 
         for (Move move : allMoves) {
@@ -56,15 +56,12 @@ public class Evaluator {
             board.unmakeMove(move);
             //System.out.println("From " + move.startSquare/8 + ", " + move.startSquare%8 + " to " + move.targetSquare/8 + ", " + move.targetSquare%8 + " - " + score);
 
-            if (score == bestScore) {
-                bestMoves.add(move);
-            } else if (score > bestScore) {
-                bestMoves.clear();
-                bestMoves.add(move);
+            if (score > bestScore) {
+                bestMove = move;
                 bestScore = score;
             }
         }
-        return bestMoves.isEmpty() ? null : bestMoves.get(0);
+        return bestMove;
     }
 
     private int negamax(int colour, int depth, int plyFromRoot, int alpha, int beta, int numOfExtensions) {
