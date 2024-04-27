@@ -11,30 +11,20 @@ import static java.lang.Math.abs;
 
 public class MoveSorter {
 
-    private static final int winningCaptureBias = 8_000_000;
-    private static final int losingCaptureBias = 2_000_000;
-    private static final int promotionBias = 6_000_000;
-    private static final int hashMoveScore = 100_000_000;
+    private static final int positiveCaptureScore = 8_000_000;
+    private static final int negativeCaptureScore = 2_000_000;
+    private static final int promotionScore = 6_000_000;
 
+    public MoveSorter() {}
 
-    public MoveSorter() {
-    }
-
-    public static List<Move> sort(Move hashMove, List<Move> moves, long attackMap, long pawnAttackMap, int gameStage, boolean quiescenceSearch, int ply) {
+    public static List<Move> sort(List<Move> moves, long attackMap, long pawnAttackMap, int gameStage) {
         Move[] movesAsArray = moves.toArray(new Move[0]);
 
-        for (int i = 0; i < movesAsArray.length; i++) {
-
-            Move move = movesAsArray[i]; //TODO: add rest of stuff from c# project
-            /*if (hashMove != null && move.equals(hashMove))
-            {
-                scoresArray[i] = hashMoveScore;
-                continue;
-            }*/
+        for(Move move : movesAsArray) {
             int score = 0;
             int colour = move.colour;
-            int startSquare = move.startSquare;
-            int targetSquare = move.targetSquare;
+            int start = move.startSquare;
+            int target = move.targetSquare;
             int movePiece = move.piece;
             int pieceType = abs(movePiece);
             int targetPiece = move.targetPiece;
@@ -42,31 +32,29 @@ public class MoveSorter {
             boolean promotionFlag = move.promotionFlag;
             int pieceValue = Evaluator.materialValue[pieceType];
 
-            if (isCapture) {
-                // Order moves to try capturing the most valuable opponent piece with least valuable of own pieces first
-                int captureMaterialDelta = Evaluator.materialValue[abs(targetPiece)] - pieceValue;
-                boolean opponentCanRecapture = isBitSet(attackMap | pawnAttackMap, targetSquare);
-                if (opponentCanRecapture) {
-                    score += (captureMaterialDelta >= 0 ? winningCaptureBias : losingCaptureBias) + captureMaterialDelta;
-                }
-                else {
-                    score += winningCaptureBias + captureMaterialDelta;
-                }
-            }
             if (pieceType == PAWN) {
                 if (promotionFlag && !isCapture) {
-                    score += promotionBias;
+                    score += promotionScore;
                 }
             } else if (pieceType < KING){
-                int toScore = getPositionScore(movePiece, targetSquare, gameStage) * colour;
-                int fromScore = getPositionScore(movePiece, startSquare, gameStage) * colour;
+                int toScore = getPositionScore(movePiece, target, gameStage) * colour;
+                int fromScore = getPositionScore(movePiece, start, gameStage) * colour;
                 score += toScore - fromScore;
 
-                if (isBitSet(pawnAttackMap, targetSquare)) {
+                if (isBitSet(pawnAttackMap, target)) {
                     score -= 50;
                 }
-                else if (isBitSet(attackMap, targetSquare)) {
+                else if (isBitSet(attackMap, target)) {
                     score -= 25;
+                }
+            }
+            if (isCapture) {
+                int captureGain = Evaluator.materialValue[abs(targetPiece)] - pieceValue;
+                boolean isRecapturePossible = isBitSet(attackMap | pawnAttackMap, target);
+                if (isRecapturePossible) {
+                    score += (captureGain >= 0 ? positiveCaptureScore : negativeCaptureScore) + captureGain;
+                } else {
+                    score += positiveCaptureScore + captureGain;
                 }
             }
             move.score = score;

@@ -40,13 +40,13 @@ public class Evaluator {
 
     public Move getBestMove(int colour) {
         List<Move> allMoves = moveGenerator.generateMoves(colour, false);
-        allMoves = sort(null, allMoves, moveGenerator.opponentAttackMap, moveGenerator.opponentPawnAttackMap, board.getGameStage(), false, 0);
+        allMoves = sort(allMoves, moveGenerator.opponentAttackMap, moveGenerator.opponentPawnAttackMap, board.getGameStage());
         Move bestMove = null;
         int bestScore = MIN_VALUE;
 
         for (Move move : allMoves) {
             board.makeMove(move, true);
-            int score = -negamax(-colour, EVALUATION_DEPTH-1, 1, MIN_VALUE, MAX_VALUE, 0);
+            int score = -negamax(-colour, EVALUATION_DEPTH-1, 1, MIN_VALUE, MAX_VALUE);
             board.unmakeMove(move);
             //System.out.println("From " + move.startSquare/8 + ", " + move.startSquare%8 + " to " + move.targetSquare/8 + ", " + move.targetSquare%8 + " - " + score);
 
@@ -68,7 +68,7 @@ public class Evaluator {
         }
 
         List<Move> allMoves = moveGenerator.generateMoves(colour, false);
-        allMoves = sort(null, allMoves, moveGenerator.opponentAttackMap, moveGenerator.opponentPawnAttackMap, board.getGameStage(), false, 0);
+        allMoves = sort(allMoves, moveGenerator.opponentAttackMap, moveGenerator.opponentPawnAttackMap, board.getGameStage());
         if (allMoves.isEmpty()) {
             if (moveGenerator.isKingInCheck()) {
                 return MIN_VALUE + plyFromRoot; // if there are more ways to get a mate it prevents mate in the quickest way.
