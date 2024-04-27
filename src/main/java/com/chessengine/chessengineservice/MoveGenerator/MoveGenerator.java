@@ -68,7 +68,6 @@ public class MoveGenerator {
         generateQuietMoves = !capturesOnly;
 
         initialize(colour);
-
         getKingMoves();
 
         if (!inDoubleCheck) {

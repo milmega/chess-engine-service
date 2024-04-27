@@ -6,6 +6,7 @@ import static com.chessengine.chessengineservice.Helpers.BoardHelper.posToX;
 import static com.chessengine.chessengineservice.Helpers.BoardHelper.posToY;
 
 public class Move {
+    public int id;
     public int colour;
     public int piece;
     public int startSquare;
@@ -26,8 +27,10 @@ public class Move {
     public int postCastlingPosition;
     public int gameResult;
     public int score;
+    static int newId = 0;
 
     public Move(int piece, int startSquare, int targetSquare, int targetPiece) {
+        this.id = newId++;
         this.colour = piece > 0 ? 1 : -1;
         this.piece = piece;
         this.startSquare = startSquare;

@@ -29,9 +29,6 @@ public class TranspositionTable {
     }
 
     public int lookupEvaluation(int depth, int plyFromRoot, int alpha, int beta) {
-        if (disabled) {
-            return -1;
-        }
         TTEntry entry;
         int index = new BigInteger(Long.toBinaryString(board.zobristKey), 2).mod(count).intValue();
         entry = entries[index];
@@ -52,9 +49,6 @@ public class TranspositionTable {
     }
 
     public void storeEvaluation(int depth, int numPlySearched, int eval, int evalType, Move move) {
-        if (disabled) {
-            return;
-        }
         int index = new BigInteger(Long.toBinaryString(board.zobristKey), 2).mod(count).intValue();
         TTEntry entry = new TTEntry(board.zobristKey, correctMateScoreForStorage(eval, numPlySearched), (byte)depth, (byte)evalType, move);
         entries[index] = entry;

@@ -54,6 +54,42 @@ public class Board {
                 4, 2, 3, 5, 6, 3, 2, 4}
     * */
 
+    public void initTestBoard() {
+        square = new int[] {
+                -4, 0, -3, -5, -6, 0, 0, -4,
+                0, -1, -1, -2, 0, -1, -1, -1,
+                -1, 0, 0, 0, -1, -2, 0, 0,
+                0, 0, 0, 0, 0, 0, 0, 0,
+                0, 0, 0, 1, 5, 0, 0, 0,
+                1, 0, 1, 0, 0, 2, 0, 0,
+                0, 0, 1, 0, 0, 1, 1, 1,
+                4, 0, 3, 0, 6, 3, 0, 4};
+        bitboard.pieces = new long[2][7];
+        material = new int[][] {{0, 0, 0, 0, 0, 0, 0}, {0, 0, 0, 0, 0, 0, 0}};
+        for (int i = 0; i < square.length; i++) {
+            if (square[i] > 0) {
+                if (square[i] == KING) {
+                    setKingPosition(1, i);
+                }
+                material[0][square[i]]++;
+                bitboard.pieces[0][0] |= 1L << 63 - i;
+                bitboard.pieces[0][square[i]] |= 1L << 63 - i;
+            }
+            if (square[i] < 0) {
+                if (square[i] == -KING) {
+                    setKingPosition(-1, i);
+                }
+                material[1][-square[i]]++;
+                bitboard.pieces[1][0] |= 1L << 63 - i;
+                bitboard.pieces[1][-square[i]] |= 1L << 63 - i;
+            }
+        }
+        setGameStage(GAME_START);
+        castlingRights = 0b1111;
+        pgnCode = "";
+        bitboard.updateBitboards();
+    }
+
     public void initializeBoard() {
         square = new int[] {
                 -4, -2, -3, -5, -6, -3, -2, -4,
@@ -368,6 +404,5 @@ public class Board {
                 bitboard.toggleSquare(targetPiece, target);
             }
         }
-
     }
 }

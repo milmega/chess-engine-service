@@ -1,6 +1,5 @@
 package com.chessengine.chessengineservice;
 
-import com.chessengine.chessengineservice.Helpers.FenHelper;
 import com.chessengine.chessengineservice.MoveGenerator.MoveGenerator;
 
 import java.util.ArrayList;
@@ -16,12 +15,11 @@ public class Evaluator {
 
     MoveGenerator moveGenerator;
     HashMap<String, List<Move>> moveCache;
-    FenHelper fenHelper;
     Board board;
     TranspositionTable tTable;
     int level;
     private int EVALUATION_DEPTH = 5;
-    private int QSEARCH_DEPTH = -1;
+    private int QSEARCH_DEPTH = 4;
     private final int MAX_VALUE = 1000000000;
     private final int MIN_VALUE = -1000000000;
     private final boolean addExtension = false;
@@ -40,7 +38,6 @@ public class Evaluator {
         }
         moveGenerator = board.moveGenerator;
         moveCache = new HashMap<>();
-        fenHelper = new FenHelper();
         tTable = board.tTable;
     }
 
@@ -87,33 +84,9 @@ public class Evaluator {
         for (int i = 0; i < allMoves.size(); i++) {
             Move move = allMoves.get(i);
             board.makeMove(move, true);
-
-            int score = 0;
-            if (addExtension) {
-                boolean isCapture = board.square[move.targetSquare] != 0;
-                int extension = 0;
-                if (numOfExtensions < maxNumOfExtensions) {
-                    if (moveGenerator.isKingInCheck() || (abs(move.piece) == PAWN && (move.toX == 1 || move.toX == 6))) {
-                        extension = 1;
-                    }
-                }
-                boolean fullSearch = true;
-                if (extension == 0 && depth >= 3 && i >= 3 && !isCapture) { // Reduce the depth of the search for moves later in the move list as these are less likely to be good (assuming our move ordering isn't terrible)
-                    int reduceDepth = 1;
-                    score = -negamax(-colour, depth - 1 - reduceDepth, plyFromRoot + 1, -alpha - 1, -alpha, numOfExtensions);
-                    // If the evaluation is better than expected, we'd better to a full-depth search to get a more accurate evaluation
-                    fullSearch = score > alpha;
-                }
-                if (fullSearch) {
-                    score = -negamax(-colour, depth - 1 + extension, plyFromRoot + 1, -beta, -alpha, numOfExtensions + extension);
-                }
-            } else {
-                score = -negamax(-colour, depth - 1, plyFromRoot + 1, -beta, -alpha, numOfExtensions);
-            }
-
+            int score = -negamax(-colour, depth - 1, plyFromRoot + 1, -beta, -alpha);
             board.unmakeMove(move);
 
-            // (Beta-cutoff / Fail high) Move was *too* good, opponent will choose a different move earlier on to avoid this position.
             if (score >= beta) {
                 tTable.storeEvaluation(depth, plyFromRoot, beta, tTable.lowerBound, move);
                 return beta;

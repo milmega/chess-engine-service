@@ -30,15 +30,4 @@ public class BitboardHelper {
         board &= (board - 1);
         return new Pair<>(63 - i, board);
     }
-
-    public static void printHexAsGrid(long hexVal) {
-        String bin = String.format("%64s", Long.toBinaryString(hexVal)).replace(' ', '0');
-        for (int i = 0; i < bin.length(); i++) {
-            if (i > 0 && i % 8 == 0) {
-                System.out.println();
-            }
-            System.out.print(bin.charAt(i) + " ");
-        }
-        System.out.println();
-    }
 }
