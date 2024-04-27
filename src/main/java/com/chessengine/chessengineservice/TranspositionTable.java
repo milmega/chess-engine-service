@@ -1,14 +1,13 @@
 package com.chessengine.chessengineservice;
 
 import java.math.BigInteger;
-import java.util.HashMap;
 
 import static java.lang.Math.abs;
 
 public class TranspositionTable {
 
     Board board;
-    TTEntry[] entries;
+    TTData[] data;
     BigInteger count;
     private int MAX_VALUE = 1000000000;
     public int exact = 0;
@@ -21,51 +20,43 @@ public class TranspositionTable {
     }
 
     public void reset() {
-        int ttEntrySizeBytes = 16;
+        int dataSize = 16;
         int sizeInBytes = 64 * 1024 * 1024;
-        int numEntries = sizeInBytes / ttEntrySizeBytes;
-        count = new BigInteger(String.valueOf(numEntries));
-        entries = new TTEntry[numEntries];
+        int tableSize = sizeInBytes / dataSize;
+        count = new BigInteger(String.valueOf(tableSize));
+        data = new TTData[tableSize];
     }
 
-    public int lookupEvaluation(int depth, int plyFromRoot, int alpha, int beta) {
-        TTEntry entry;
+    public int retrieveScore(int depth, int plyFromRoot, int alpha, int beta) {
+        TTData dataRow;
         int index = new BigInteger(Long.toBinaryString(board.zobristKey), 2).mod(count).intValue();
-        entry = entries[index];
+        dataRow = data[index];
 
-        if (entry != null && entry.key == board.zobristKey && entry.depth >= depth) {
-            int correctedScore = correctRetrievedMateScore(entry.score, plyFromRoot);
-            if (entry.nodeType == exact) {
-                return correctedScore;
+        if (dataRow != null && dataRow.zobristKey == board.zobristKey && dataRow.depth >= depth) {
+            int score = verifyScore(dataRow.score, plyFromRoot, -1);
+            if (dataRow.nodeType == exact) {
+                return score;
             }
-            if (entry.nodeType == upperBound && correctedScore <= alpha) {
-                return correctedScore;
+            if (dataRow.nodeType == upperBound && score <= alpha) {
+                return score;
             }
-            if (entry.nodeType == lowerBound && correctedScore >= beta) {
-                return correctedScore;
+            if (dataRow.nodeType == lowerBound && score >= beta) {
+                return score;
             }
         }
         return -1;
     }
 
-    public void storeEvaluation(int depth, int numPlySearched, int eval, int evalType, Move move) {
+    public void saveScore(int depth, int numPlySearched, int eval, int evalType, Move move) {
         int index = new BigInteger(Long.toBinaryString(board.zobristKey), 2).mod(count).intValue();
-        TTEntry entry = new TTEntry(board.zobristKey, correctMateScoreForStorage(eval, numPlySearched), (byte)depth, (byte)evalType, move);
-        entries[index] = entry;
+        TTData dataRow = new TTData(board.zobristKey, verifyScore(eval, numPlySearched, 1), (byte)depth, (byte)evalType, move);
+        data[index] = dataRow;
     }
 
-    private int correctMateScoreForStorage(int score, int numPlySearched) {
+    private int verifyScore(int score, int exploredPlies, int isSaving) {
         if (abs(score) > MAX_VALUE - 1000) {
-            int sign = score > 0 ? 1 : -1;
-            return (score * sign + numPlySearched) * sign;
-        }
-        return score;
-    }
-
-    private int correctRetrievedMateScore(int score, int numPlySearched) {
-        if (abs(score) > MAX_VALUE - 1000) {
-            int sign = score > 0 ? 1 : -1;
-            return (score * sign - numPlySearched) * sign;
+            int colour = score > 0 ? 1 : -1;
+            return (score * colour + isSaving * exploredPlies) * colour;
         }
         return score;
     }

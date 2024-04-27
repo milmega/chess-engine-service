@@ -2,14 +2,11 @@ package com.chessengine.chessengineservice;
 
 import com.chessengine.chessengineservice.MoveGenerator.MoveGenerator;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
 import static com.chessengine.chessengineservice.Helpers.EvaluatorHelper.getPositionScore;
 import static com.chessengine.chessengineservice.MoveSorter.sort;
-import static com.chessengine.chessengineservice.Piece.PAWN;
-import static java.lang.Math.abs;
 
 public class Evaluator {
 
@@ -61,8 +58,8 @@ public class Evaluator {
         return bestMove;
     }
 
-    private int negamax(int colour, int depth, int plyFromRoot, int alpha, int beta, int numOfExtensions) {
-        int ttScore = tTable.lookupEvaluation(depth, plyFromRoot, alpha, beta);
+    private int negamax(int colour, int depth, int plyFromRoot, int alpha, int beta) {
+        int ttScore = tTable.retrieveScore(depth, plyFromRoot, alpha, beta);
         if (ttScore != -1) {
             return ttScore;
         }
@@ -88,7 +85,7 @@ public class Evaluator {
             board.unmakeMove(move);
 
             if (score >= beta) {
-                tTable.storeEvaluation(depth, plyFromRoot, beta, tTable.lowerBound, move);
+                tTable.saveScore(depth, plyFromRoot, beta, tTable.lowerBound, move);
                 return beta;
             }
             if (score > alpha) {
@@ -97,7 +94,7 @@ public class Evaluator {
                 alpha = score;
             }
         }
-        tTable.storeEvaluation(depth, plyFromRoot, alpha, evaluationBound, bestMove); //TODO: should i delete bestMove from storing
+        tTable.saveScore(depth, plyFromRoot, alpha, evaluationBound, bestMove);
         return alpha;
     }
 

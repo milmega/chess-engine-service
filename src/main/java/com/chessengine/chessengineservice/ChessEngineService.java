@@ -123,17 +123,17 @@ public class ChessEngineService {
         return 0;
     }
 
-    public GameState getGameUpdate(int gameId) {
+    public GameStatus getGameUpdate(int gameId) {
         if (gameById.containsKey(gameId)) {
             Game game = gameById.get(gameId);
             Move lastMove = game.lastMove;
             int whiteTime = game.whiteTimer.getSecondsLeft();
             int blackTime = game.blackTimer.getSecondsLeft();
-            return new GameState(true, lastMove, whiteTime, blackTime);
+            return new GameStatus(true, lastMove, whiteTime, blackTime);
         } else {
             System.out.println("Getting game update: Game with id: " + gameId + " does not exist");
             Move move = new Move(0, 0, 0, 0);
-            return new GameState(false, move, 0, 0);
+            return new GameStatus(false, move, 0, 0);
         }
     }
 

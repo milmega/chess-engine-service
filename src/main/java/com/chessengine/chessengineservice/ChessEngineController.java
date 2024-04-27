@@ -34,7 +34,7 @@ public class ChessEngineController {
 
     @GetMapping("/fetchUpdate")
     @CrossOrigin
-    public GameState fetchUpdate(@RequestParam int id) {
+    public GameStatus fetchUpdate(@RequestParam int id) {
         return chessEngineService.getGameUpdate(id);
     }
 
