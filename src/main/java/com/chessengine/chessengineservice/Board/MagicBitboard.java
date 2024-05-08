@@ -1,4 +1,6 @@
-package com.chessengine.chessengineservice;
+package com.chessengine.chessengineservice.Board;
+
+import com.chessengine.chessengineservice.Structures.Pair;
 
 import java.math.BigInteger;
 import java.util.ArrayList;
@@ -20,8 +22,6 @@ public class MagicBitboard {
     long[][] bishopAttacks;
     long[][] rookAttacks;
 
-    /* Precomputed bitboards where moves for bishops and rooks are already calculated
-     A mask is a board representing legal moves available to the piece from a square */
     public MagicBitboard() {
         bishopMask = new long[64];
         rookMask = new long[64];
@@ -30,35 +30,32 @@ public class MagicBitboard {
         computeMasks();
     }
 
-    public long getSliderAttacks(int square, long blockers, boolean sliding)
-    {
-        return sliding ? getBishopAttacks(square, blockers) : getRookAttacks(square, blockers);
+    public long computeSlidingAttacks(int square, long blockers, boolean sliding) {
+        return sliding ? computeBishopAttacks(square, blockers) : computeRookAttacks(square, blockers);
     }
 
-    public long getRookAttacks(int square, long blockers)
-    {
+    public long computeRookAttacks(int square, long blockers) {
         int key = BigInteger.valueOf(blockers & rookMask[square]).multiply(rookMagic[square]).mod(maxULong).shiftRight(rookShift[square]).intValue();
         return rookAttacks[square][key];
     }
 
-    public long getBishopAttacks(int square, long blockers)
-    {
+    public long computeBishopAttacks(int square, long blockers) {
         int key = BigInteger.valueOf(blockers & bishopMask[square]).multiply(bishopMagic[square]).mod(maxULong).shiftRight(bishopShift[square]).intValue();
         return bishopAttacks[square][key];
     }
 
     private void computeMasks() {
         for (int i = 0; i < 64; i++) {
-            bishopMask[i] = calculateMovementMask(i, true);
-            rookMask[i] = calculateMovementMask(i, false);
+            bishopMask[i] = computeMovementMask(i, true);
+            rookMask[i] = computeMovementMask(i, false);
         }
         for (int i = 0; i < 64; i++) {
-            bishopAttacks[i] = calculateAttacks(i, true, bishopMagic[i], bishopShift[i]);
-            rookAttacks[i] = calculateAttacks(i, false, rookMagic[i], rookShift[i]);
+            bishopAttacks[i] = computeAttacks(i, true, bishopMagic[i], bishopShift[i]);
+            rookAttacks[i] = computeAttacks(i, false, rookMagic[i], rookShift[i]);
         }
     }
 
-    private long calculateMovementMask(int square, boolean diagonal) {
+    private long computeMovementMask(int square, boolean diagonal) {
         long mask = 0;
         Pair<Integer, Integer>[] movement = diagonal ? getBishopMovement() : getRookMovement();
         int x = posToX(square);
@@ -81,51 +78,42 @@ public class MagicBitboard {
         return mask;
     }
 
-    private long[] calculateAttacks(int square, boolean diagonal, BigInteger magic, int shift) {
+    private long[] computeAttacks(int square, boolean diagonal, BigInteger magic, int shift) {
         int bitIndex = 64 - shift;
         int size = 1 << bitIndex;
-        long[] table = new long[size];
+        long[] attacks = new long[size];
 
-        long movementMask = calculateMovementMask(square, diagonal);
-        long[] blockers = getBlockerBitboards(movementMask);
+        long movementMask = computeMovementMask(square, diagonal);
+        long[] blockers = computeBlockersBitboard(movementMask);
 
         for (long blocker : blockers) {
             int index = magic.multiply(BigInteger.valueOf(blocker)).mod(maxULong).shiftRight(shift).intValue();
-            long moves = getLegalMoveBitboardFromBlockers(square, blocker, diagonal);
-            table[index] = moves;
+            long moves = computeLegalMoveBitboard(square, blocker, diagonal);
+            attacks[index] = moves;
         }
-        return table;
+        return attacks;
     }
 
-    private long[] getBlockerBitboards(long mask)
-    {
-        // Create a list of the indices of the bits that are set in the movement mask
-        List<Integer> moveSquareIndices = new ArrayList<>();
-        for (int i = 0; i < 64; i++)
-        {
-            if (((mask >> i) & 1) == 1)
-            {
-                moveSquareIndices.add(i);
+    private long[] computeBlockersBitboard(long mask) {
+        List<Integer> listOfIndexes = new ArrayList<>();
+        for (int i = 0; i < 64; i++) {
+            if (((mask >> i) & 1) == 1) {
+                listOfIndexes.add(i);
             }
         }
-        // Calculate total number of different bitboards
-        int numBlockers = 1 << moveSquareIndices.size();
-        long[] blockerBitboards = new long[numBlockers];
+        int numBlockers = 1 << listOfIndexes.size();
+        long[] blockers = new long[numBlockers];
 
-        // Create all bitboards
-        for (int blockerIndex = 0; blockerIndex < numBlockers; blockerIndex++)
-        {
-            for (int bitIndex = 0; bitIndex < moveSquareIndices.size(); bitIndex++)
-            {
+        for (int blockerIndex = 0; blockerIndex < numBlockers; blockerIndex++) {
+            for (int bitIndex = 0; bitIndex < listOfIndexes.size(); bitIndex++) {
                 int bit = (blockerIndex >> bitIndex) & 1;
-                blockerBitboards[blockerIndex] |= (long)bit << moveSquareIndices.get(bitIndex);
+                blockers[blockerIndex] |= (long)bit << listOfIndexes.get(bitIndex);
             }
         }
-        return blockerBitboards;
+        return blockers;
     }
 
-    public long getLegalMoveBitboardFromBlockers(int startSquare, long blockerBitboard, boolean diagonal)
-    {
+    public long computeLegalMoveBitboard(int startSquare, long blockerBitboard, boolean diagonal) {
         long bitboard = 0;
         Pair[] movement = diagonal ? getBishopMovement() : getRookMovement();
         int x = posToX(startSquare);

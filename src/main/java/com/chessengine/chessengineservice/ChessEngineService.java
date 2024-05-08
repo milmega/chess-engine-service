@@ -1,5 +1,8 @@
 package com.chessengine.chessengineservice;
 
+import com.chessengine.chessengineservice.Game.Game;
+import com.chessengine.chessengineservice.Game.GameStatus;
+import com.chessengine.chessengineservice.Structures.Move;
 import org.springframework.stereotype.Service;
 
 import java.util.*;

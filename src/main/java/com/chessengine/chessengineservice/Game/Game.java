@@ -1,5 +1,8 @@
-package com.chessengine.chessengineservice;
+package com.chessengine.chessengineservice.Game;
 
+import com.chessengine.chessengineservice.Board.Board;
+import com.chessengine.chessengineservice.SearchAlgo.Evaluator;
+import com.chessengine.chessengineservice.Structures.Move;
 import com.chessengine.chessengineservice.OpeningDB.OpeningDatabase;
 
 import java.util.List;

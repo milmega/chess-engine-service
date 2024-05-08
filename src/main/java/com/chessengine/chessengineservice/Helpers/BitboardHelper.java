@@ -1,6 +1,6 @@
 package com.chessengine.chessengineservice.Helpers;
 
-import com.chessengine.chessengineservice.Pair;
+import com.chessengine.chessengineservice.Structures.Pair;
 
 public class BitboardHelper {
 

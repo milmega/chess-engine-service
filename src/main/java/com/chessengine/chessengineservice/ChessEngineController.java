@@ -1,5 +1,7 @@
 package com.chessengine.chessengineservice;
 
+import com.chessengine.chessengineservice.Game.GameStatus;
+import com.chessengine.chessengineservice.Structures.Move;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
 

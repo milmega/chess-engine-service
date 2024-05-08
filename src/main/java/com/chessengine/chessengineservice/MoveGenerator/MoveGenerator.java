@@ -1,55 +1,54 @@
 package com.chessengine.chessengineservice.MoveGenerator;
 
-import com.chessengine.chessengineservice.*;
+import com.chessengine.chessengineservice.Board.Bitboard;
+import com.chessengine.chessengineservice.Board.Board;
+import com.chessengine.chessengineservice.Structures.Move;
+import com.chessengine.chessengineservice.Structures.Pair;
 
 import java.util.ArrayList;
 import java.util.List;
 
-import static com.chessengine.chessengineservice.Bitboard.*;
+import static com.chessengine.chessengineservice.Board.Bitboard.*;
 import static com.chessengine.chessengineservice.Helpers.BitboardHelper.*;
 import static com.chessengine.chessengineservice.Helpers.BoardHelper.*;
 import static com.chessengine.chessengineservice.MoveGenerator.PrecomputedMoveData.*;
-import static com.chessengine.chessengineservice.Piece.*;
+import static com.chessengine.chessengineservice.Structures.Piece.*;
 
 public class MoveGenerator {
-
     final long MAX_LONG = 0xFFFFFFFFFFFFFFFFL;
-    final long whiteKingsideMask = 0x6L;
-    final long whiteQueensideMask = 0x70L;
-    final long whiteQueensideMask2 = 0x30L;
-    final long blackKingsideMask = 0x6L << 56;
-    final long blackQueensideMask = 0x7L << 60;
-    final long blackQueensideMask2 = 0x3L << 60;
+    final long wKingCastlingMask = 0x6L;
+    final long wQueenCastlingMask = 0x70L;
+    final long wQueenCastlingMask2 = 0x30L;
+    final long bKingCastlingMask = 0x6L << 56;
+    final long bQueenCastlingMask = 0x7L << 60;
+    final long bQueenCastlingMask2 = 0x3L << 60;
+    //  N, S, W, E, NW, SE, NE, SW
+    final int[] squareChangeOffset = { -8, 8, -1, 1, -9, 9, -7, 7 };
     int friendlyColour;
     int opponentColour;
-    int friendlyKingSquare;
+    int friendlyKingPos;
     int friendlyIndex;
-    int enemyIndex;
+    int opponentIndex;
 
-    boolean inCheck;
-    boolean inDoubleCheck;
+    boolean isInCheck;
+    boolean isInDoubleCheck;
 
-    // If in check, this bitboard contains squares in line from checking piece up to king
-    // If not in check, all bits are set to 1
-    long checkRayBitmask;
-    long pinRays;
-    long notPinRays;
-    long opponentAttackMapNoPawns;
-    public long opponentAttackMap;
-    public long opponentPawnAttackMap;
-    long opponentSlidingAttackMap;
-    boolean generateQuietMoves;
+    long pathInCheckMask;
+    long pinnedPaths;
+    long notPinnedPaths;
+    long oppAttackMapWithoutPawns;
+    public long oppAttackMap;
+    public long oppPawnAttackMap;
+    long oppSlidingAttacks;
+    boolean quietMoves;
     Board board;
-    int currMoveIndex;
 
-    long enemyPieces;
+    long opponentPieces;
     long friendlyPieces;
     long allPieces;
     long emptySquares;
-    long emptyOrEnemySquares;
-    // If only captures should be generated, this will have 1s only in positions of enemy pieces.
-    // Otherwise it will have 1s everywhere.
-    long moveTypeMask;
+    long opponentOrEmptySquares;
+    long captureMask;
 
     Bitboard bitboard;
     List<Move> allMoves;
@@ -60,81 +59,76 @@ public class MoveGenerator {
     }
 
     public boolean isKingInCheck() {
-        return inCheck;
+        return isInCheck;
     }
 
-    public List<Move> generateMoves(int colour, boolean capturesOnly) {
+    public List<Move> computeAllMoves(int colour, boolean capturesOnly) {
         allMoves = new ArrayList<>();
-        generateQuietMoves = !capturesOnly;
+        quietMoves = !capturesOnly;
 
-        initialize(colour);
-        getKingMoves();
+        initializeBitboards(colour);
+        computeMovesForKing();
 
-        if (!inDoubleCheck) {
-            getSlidingMoves();
-            getKnightMoves();
-            getPawnMoves();
+        if (!isInDoubleCheck) {
+            computeMovesForPawns();
+            computeMovesForKnights();
+            computeMovesForSliders();
         }
         return allMoves;
     }
-
-    private void initialize(int colour) {
-        // Reset state
-        currMoveIndex = 0;
-        inCheck = false;
-        inDoubleCheck = false;
-        checkRayBitmask = 0;
-        pinRays = 0;
-        allMoves = new ArrayList<>();
-
-        // Store some info for convenience
+    private void initializeBitboards(int colour) {
         friendlyColour = colour;
         opponentColour = -colour;
-        friendlyKingSquare = board.getKingPosition(colour);
+        friendlyKingPos = board.getKingPosition(colour);
         friendlyIndex = colour > 0 ? 0 : 1;
-        enemyIndex = 1 - friendlyIndex;
+        opponentIndex = 1 - friendlyIndex;
 
-        // Store some bitboards for convenience
-        enemyPieces = bitboard.pieces[enemyIndex][0];
+        opponentPieces = bitboard.pieces[opponentIndex][0];
         friendlyPieces = bitboard.pieces[friendlyIndex][0];
         allPieces = bitboard.allPieces;
         emptySquares = ~allPieces;
-        emptyOrEnemySquares = emptySquares | enemyPieces;
-        moveTypeMask = generateQuietMoves ? MAX_LONG : enemyPieces;
+        opponentOrEmptySquares = emptySquares | opponentPieces;
+        captureMask = quietMoves ? MAX_LONG : opponentPieces;
 
-        getAttackData(colour);
+        isInCheck = false;
+        isInDoubleCheck = false;
+        pathInCheckMask = 0;
+        pinnedPaths = 0;
+        allMoves = new ArrayList<>();
+
+        computeAttackData(colour);
     }
 
-    private void getAttackData(int colour) {
-        getSlidingAttackMap();
-        int friendlyKingSquare = board.getKingPosition(colour);
+    private void computeAttackData(int colour) {
+        computeSlidingAttacks();
+        int friendlyKingPos = board.getKingPosition(colour);
         int friendlyIndex = colour > 0 ? 0 : 1;
         int opponentIndex = 1 - friendlyIndex;
-        int startIndex = 0;
-        int endIndex = 8;
+        int dirStart = 0;
+        int dirEnd = 8;
 
         if (bitboard.pieces[opponentIndex][QUEEN] == 0) {
-            startIndex = bitboard.pieces[opponentIndex][ROOK] > 0 ? 0 : 4;
-            endIndex = bitboard.pieces[opponentIndex][BISHOP] > 0 ? 8 : 4;
+            dirStart = bitboard.pieces[opponentIndex][ROOK] > 0 ? 0 : 4;
+            dirEnd = bitboard.pieces[opponentIndex][BISHOP] > 0 ? 8 : 4;
         }
 
-        for (int dir = startIndex; dir < endIndex; dir++) {
-            boolean isDiagonal = dir > 3;
-            long slider = isDiagonal ? bitboard.diagonalSlider[opponentIndex] : bitboard.orthogonalSlider[opponentIndex];
-            var m = dirRayMask[dir][friendlyKingSquare];
-            if ((m & slider) == 0) {
+        for (int i = dirStart; i < dirEnd; i++) {
+            boolean diagonalMove = i > 3;
+            long slidingMask = diagonalMove ? bitboard.diagonalSlider[opponentIndex] : bitboard.orthogonalSlider[opponentIndex];
+            long mask = dirPathMask[i][friendlyKingPos];
+            if ((mask & slidingMask) == 0) {
                 continue;
             }
 
-            int n = distFromEdge[friendlyKingSquare][dir];
-            int directionOffset = squareChangeOffset[dir];
-            boolean isFriendlyPieceAlongRay = false;
-            long rayMask = 0;
+            int maxDist = distFromEdge[friendlyKingPos][i];
+            int changeOffset = squareChangeOffset[i];
+            boolean friendOnThePath = false;
+            long pathMask = 0;
 
-            for (int i = 0; i < n; i++) {
-                int squareIndex = friendlyKingSquare + directionOffset * (i + 1);
-                rayMask |= 1L << 63 - squareIndex;
-                int piece = board.square[squareIndex];
+            for (int j = 0; j < maxDist; j++) {
+                int position = friendlyKingPos + changeOffset * (j + 1);
+                pathMask |= 1L << 63 - position;
+                int piece = board.chessboard[position];
 
                 if (piece != 0) {
                     if (isSameColour(piece, colour)) {
@@ -170,314 +164,190 @@ public class MoveGenerator {
             }
         }
 
-        notPinRays = ~pinRays;
-        long opponentKnightAttacks = 0;
-        long knights = bitboard.pieces[opponentIndex][KNIGHT];
-        long friendlyKingBoard = bitboard.pieces[friendlyIndex][KING];
+        notPinnedPaths = ~pinnedPaths;
+        long oppKnightAttacks = 0;
+        long knightsBB = bitboard.pieces[opponentIndex][KNIGHT];
+        long kingBB = bitboard.pieces[friendlyIndex][KING];
 
-        while (knights != 0) {
-            Pair<Integer, Long> plsbResult = popLeastSignificantBit(knights);
-            int knightSquare = plsbResult.first;
-            knights = plsbResult.second;
-            long knightAttacks = bitboard.knightAttacks[knightSquare];
-            opponentKnightAttacks |= knightAttacks;
+        while (knightsBB != 0) {
+            Pair<Integer, Long> plsbResult = popLeastSignificantBit(knightsBB);
+            int position = plsbResult.first;
+            knightsBB = plsbResult.second;
+            long knightAttacks = bitboard.knightAttacks[position];
+            oppKnightAttacks |= knightAttacks;
 
-            if ((knightAttacks & friendlyKingBoard) != 0)
-            {
-                inDoubleCheck = inCheck;
-                inCheck = true;
-                checkRayBitmask |= 1L << 63 - knightSquare;
+            if ((knightAttacks & kingBB) != 0) {
+                isInDoubleCheck = isInCheck;
+                isInCheck = true;
+                pathInCheckMask |= 1L << 63 - position;
             }
         }
 
-        opponentPawnAttackMap = 0;
-        long opponentPawnsBoard = bitboard.pieces[opponentIndex][PAWN];
-        opponentPawnAttackMap = bitboard.getPawnAttacks(opponentColour);
-        if (isBitSet(opponentPawnAttackMap, 63 - friendlyKingSquare)) {
-            inDoubleCheck = inCheck; // if already in check, then this is double check
-            inCheck = true;
-            long possiblePawnAttackOrigins = colour > 0
-                    ? bitboard.whitePawnAttacks[friendlyKingSquare]
-                    : bitboard.blackPawnAttacks[friendlyKingSquare];
-            long pawnCheckMap = opponentPawnsBoard & possiblePawnAttackOrigins;
-            checkRayBitmask |= pawnCheckMap;
+        oppPawnAttackMap = 0;
+        long oppPawnsBB = bitboard.pieces[opponentIndex][PAWN];
+        oppPawnAttackMap = bitboard.computePawnAttacks(opponentColour);
+        if (isBitSet(oppPawnAttackMap, 63 - friendlyKingPos)) {
+            isInDoubleCheck = isInCheck;
+            isInCheck = true;
+            long attackStartSquares = colour > 0
+                    ? bitboard.wPawnAttacks[friendlyKingPos]
+                    : bitboard.bPawnAttacks[friendlyKingPos];
+            long pawnCheckBB = oppPawnsBB & attackStartSquares;
+            pathInCheckMask |= pawnCheckBB;
         }
 
-        int enemyKingSquare = board.getKingPosition(-colour);
+        int oppKingPos = board.getKingPosition(-colour);
 
-        opponentAttackMapNoPawns = opponentSlidingAttackMap | opponentKnightAttacks | bitboard.kingMoves[enemyKingSquare];
-        opponentAttackMap = opponentAttackMapNoPawns | opponentPawnAttackMap;
+        oppAttackMapWithoutPawns = bitboard.kingMoves[oppKingPos] | oppKnightAttacks | oppSlidingAttacks;
+        oppAttackMap = oppPawnAttackMap | oppAttackMapWithoutPawns;
 
-        if (!inCheck) {
-            checkRayBitmask = MAX_LONG;
+        if (!isInCheck) {
+            pathInCheckMask = MAX_LONG;
         }
     }
 
-    private void getSlidingAttackMap() {
-        opponentSlidingAttackMap = 0;
-        updateAttackMap(bitboard.diagonalSlider[enemyIndex], true); //enemy sliders
-        updateAttackMap(bitboard.orthogonalSlider[enemyIndex], false); //enemy sliders
+    private void computeSlidingAttacks() {
+        oppSlidingAttacks = 0;
+        updateAttacks(bitboard.diagonalSlider[opponentIndex], true);
+        updateAttacks(bitboard.orthogonalSlider[opponentIndex], false);
     }
 
-    private void updateAttackMap(long board, boolean diagonal) {
+    private void updateAttacks(long board, boolean diagonal) {
         long blockers = allPieces & ~(bitboard.pieces[friendlyIndex][6]); //friendly king
-
         while (board != 0) {
             Pair<Integer, Long> plsbResult = popLeastSignificantBit(board);
-            int startSquare = plsbResult.first;
+            int fromPosition = plsbResult.first;
             board = plsbResult.second;
-            opponentSlidingAttackMap |= bitboard.getSliderAttacks(startSquare, blockers, diagonal);
+            oppSlidingAttacks |= bitboard.computeSlidingAttacks(fromPosition, blockers, diagonal);
         }
     }
 
-    private void getKingMoves() {
-        long legalMask = ~(opponentAttackMap | friendlyPieces);
-        long kingMoves = bitboard.kingMoves[friendlyKingSquare] & legalMask & moveTypeMask;
-        int piece = KING * friendlyColour;
-        while (kingMoves != 0)
-        {
-            Pair<Integer, Long> plsbResult = popLeastSignificantBit(kingMoves);//popLeastSignificantBit()(ref kingMoves);
-            int targetSquare = plsbResult.first;
-            kingMoves = plsbResult.second;
-            allMoves.add(new Move(piece, friendlyKingSquare, targetSquare, board.square[targetSquare]));
-        }
-
-        // add castling moves
-        if (!inCheck && generateQuietMoves) {
-            long castleBlockers = opponentAttackMap | allPieces;
-            if (board.isQueensideCastlingEnabled(friendlyColour)) {
-                long castleMask = friendlyColour > 0 ? whiteQueensideMask : blackQueensideMask;
-                long castleBlockMask = friendlyColour > 0 ? whiteQueensideMask2 : blackQueensideMask2;
-                if ((castleBlockMask & castleBlockers) == 0 && (castleMask & allPieces) == 0) {
-                    int targetSquare = friendlyColour > 0 ? 58 : 2;
-                    Move move = new Move(piece, friendlyKingSquare, targetSquare, board.square[targetSquare]);
-                    move.castlingFlag = true;
-                    move.preCastlingPosition = targetSquare - 2;
-                    move.postCastlingPosition = targetSquare + 1;
-                    allMoves.add(move);
-                }
-            }
-            if (board.isKingsideCastlingEnabled(friendlyColour)) {
-                long castleMask = friendlyColour > 0 ? whiteKingsideMask : blackKingsideMask;
-                if ((castleMask & castleBlockers) == 0)
-                {
-                    int targetSquare = friendlyColour > 0 ? 62 : 6;
-                    Move move = new Move(piece, friendlyKingSquare, targetSquare, board.square[targetSquare]);
-                    move.castlingFlag = true;
-                    move.preCastlingPosition = targetSquare + 1;
-                    move.postCastlingPosition = targetSquare - 1;
-                    allMoves.add(move);
-                }
-            }
-        }
-    }
-
-    private void getSlidingMoves() {
-        long moveMask = emptyOrEnemySquares & checkRayBitmask & moveTypeMask;
-        long orthogonalSliders = bitboard.orthogonalSlider[friendlyIndex];
-        long diagonalSliders = bitboard.diagonalSlider[friendlyIndex];
-
-        // Pinned pieces cannot move if king is in check
-        if (inCheck) {
-            orthogonalSliders &= ~pinRays;
-            diagonalSliders &= ~pinRays;
-        }
-
-        while (orthogonalSliders != 0) {
-            Pair<Integer, Long> plsbResult = popLeastSignificantBit(orthogonalSliders);
-            int startSquare = plsbResult.first;
-            orthogonalSliders = plsbResult.second;
-            long moveSquares = bitboard.getSliderAttacks(startSquare, allPieces, false) & moveMask;
-
-            // If piece is pinned, it can only move along the pin ray
-            if (isPiecePinned(startSquare)) {
-                moveSquares &= alignMask[startSquare][friendlyKingSquare];
-            }
-
-            while (moveSquares != 0) {
-                plsbResult = popLeastSignificantBit(moveSquares);
-                int targetSquare = plsbResult.first;
-                moveSquares = plsbResult.second;
-                allMoves.add(new Move(board.square[startSquare], startSquare, targetSquare, board.square[targetSquare]));
-            }
-        }
-
-        while (diagonalSliders != 0) {
-            Pair<Integer, Long> plsbResult = popLeastSignificantBit(diagonalSliders);
-            int startSquare = plsbResult.first;
-            diagonalSliders = plsbResult.second;
-            long moveSquares = bitboard.getSliderAttacks(startSquare, allPieces, true) & moveMask;
-
-            // If piece is pinned, it can only move along the pin ray
-            if (isPiecePinned(startSquare)) {
-                var x = alignMask[startSquare][friendlyKingSquare];
-                moveSquares &= x;
-            }
-
-            while (moveSquares != 0) {
-                plsbResult = popLeastSignificantBit(moveSquares);
-                int targetSquare = plsbResult.first;
-                moveSquares = plsbResult.second;
-                allMoves.add(new Move(board.square[startSquare], startSquare, targetSquare, board.square[targetSquare]));
-            }
-        }
-    }
-
-    private void getKnightMoves() {
-        long knights = bitboard.pieces[friendlyIndex][KNIGHT] & notPinRays;
-        long moveMask = emptyOrEnemySquares & checkRayBitmask & moveTypeMask;
-
-        while (knights != 0) {
-            Pair<Integer, Long> plsbResult = popLeastSignificantBit(knights);
-            int knightSquare = plsbResult.first;
-            knights = plsbResult.second;
-            long moveSquares = bitboard.knightAttacks[knightSquare] & moveMask;
-
-            while (moveSquares != 0) {
-                plsbResult = popLeastSignificantBit(moveSquares);
-                int targetSquare = plsbResult.first;
-                moveSquares = plsbResult.second;
-                allMoves.add(new Move(KNIGHT*friendlyColour, knightSquare, targetSquare, board.square[targetSquare]));
-            }
-        }
-    }
-
-    private void getPawnMoves() {
+    private void computeMovesForPawns() {
         int piece = PAWN * friendlyColour;
-        int pushDir = friendlyColour;;
-        int pushOffset = pushDir * 8;
+        int moveDirection = friendlyColour;;
+        int moveOffset = moveDirection * 8;
 
         long pawns = bitboard.pieces[friendlyIndex][PAWN];
-        long promotionRowMask = friendlyColour > 0 ? firstRow : lastRow;
-        long enPassantRowMask = friendlyColour > 0 ? row4 : row5;
-        long enPassantAttackingPawns = pawns & enPassantRowMask;
+        long promotionRow = friendlyColour > 0 ? firstRow : lastRow;
+        long oneSquarePush = shiftBits(pawns, moveOffset) & emptySquares;
+        long oneSquarePushWithoutPromo = oneSquarePush & pathInCheckMask & ~promotionRow;
 
-        long singlePush = shiftBits(pawns, pushOffset) & emptySquares;
-        long pushPromotions = singlePush & promotionRowMask & checkRayBitmask;
-
-        long captureEdgeColumnMask = friendlyColour > 0 ? notFirstColumn : notLastColumn; // left capture from piece perspective
-        long captureEdgeColumnMask2 = friendlyColour > 0 ? notLastColumn : notFirstColumn; // right capture from piece perspective
-        long captureA = shiftBits(pawns & captureEdgeColumnMask, pushDir * 9) & enemyPieces;
-        long captureB = shiftBits(pawns & captureEdgeColumnMask2, pushDir * 7) & enemyPieces;
-
-        long singlePushNoPromotions = singlePush & ~promotionRowMask & checkRayBitmask;
-
-        long capturePromotionsA = captureA & promotionRowMask & checkRayBitmask;
-        long capturePromotionsB = captureB & promotionRowMask & checkRayBitmask;
-
-        captureA &= checkRayBitmask & ~promotionRowMask;
-        captureB &= checkRayBitmask & ~promotionRowMask;
-
-        // Single / double push
-        if (generateQuietMoves) {
-            // Generate single pawn pushes
-            while (singlePushNoPromotions != 0) {
-                Pair<Integer, Long> plsbResult = popLeastSignificantBit(singlePushNoPromotions);
-                int targetSquare = plsbResult.first;
-                singlePushNoPromotions = plsbResult.second;
-                int startSquare = targetSquare + pushOffset;
-                if (!isPiecePinned(startSquare) || alignMask[startSquare][friendlyKingSquare] == alignMask[targetSquare][friendlyKingSquare]) {
-                    allMoves.add(new Move(piece, startSquare, targetSquare, board.square[targetSquare]));
+        if (quietMoves) {
+            while (oneSquarePushWithoutPromo != 0) {
+                Pair<Integer, Long> plsbResult = popLeastSignificantBit(oneSquarePushWithoutPromo);
+                int toPosition = plsbResult.first;
+                oneSquarePushWithoutPromo = plsbResult.second;
+                int fromPosition = toPosition + moveOffset;
+                if (!isPiecePinned(fromPosition) || dirPathMask[fromPosition][friendlyKingPos] == pathMask[toPosition][friendlyKingPos]) {
+                    allMoves.add(new Move(piece, fromPosition, toPosition, board.chessboard[toPosition]));
                 }
             }
 
-            // Generate double pawn pushes
-            long doublePushTargetRankMask = friendlyColour > 0 ? row5 : row4;
-            long doublePush = shiftBits(singlePush, pushOffset) & emptySquares & doublePushTargetRankMask & checkRayBitmask;
+            long twoSquaresPushDestRow = friendlyColour > 0 ? row5 : row4;
+            long twoSqauresPush = shiftBits(oneSquarePush, moveOffset) & emptySquares & twoSquaresPushDestRow & pathInCheckMask;
 
-            while (doublePush != 0) {
-                Pair<Integer, Long> plsbResult = popLeastSignificantBit(doublePush);
-                int targetSquare = plsbResult.first;
-                doublePush = plsbResult.second;
-                int startSquare = targetSquare + pushOffset * 2;
-                if (!isPiecePinned(startSquare) || alignMask[startSquare][friendlyKingSquare] == alignMask[targetSquare][friendlyKingSquare]) {
-                    Move move = new Move(piece, startSquare, targetSquare, board.square[targetSquare]);
+            while (twoSqauresPush != 0) {
+                Pair<Integer, Long> plsbResult = popLeastSignificantBit(twoSqauresPush);
+                int fromPosition = plsbResult.first;
+                twoSqauresPush = plsbResult.second;
+                int toPosition = fromPosition + moveOffset * 2;
+                if (!isPiecePinned(toPosition) || pathMask[toPosition][friendlyKingPos] == pathMask[fromPosition][friendlyKingPos]) {
+                    Move move = new Move(piece, toPosition, fromPosition, board.chessboard[fromPosition]);
                     move.pawnTwoSquaresMove = true;
                     allMoves.add(move);
                 }
             }
         }
 
-        // Captures
-        while (captureA != 0) {
-            Pair<Integer, Long> plsbResult = popLeastSignificantBit(captureA);
-            int targetSquare = plsbResult.first;
-            captureA = plsbResult.second;
-            int startSquare = targetSquare + pushDir * 9;
+        long leftColumnMask = friendlyColour > 0 ? notFirstColumn : notLastColumn; // left capture from piece perspective
+        long rightColumnMask = friendlyColour > 0 ? notLastColumn : notFirstColumn; // right capture from piece perspective
+        long leftCapture = shiftBits(pawns & leftColumnMask, moveDirection * 9) & opponentPieces;
+        long rightCapture = shiftBits(pawns & rightColumnMask, moveDirection * 7) & opponentPieces;
+        long leftCapturePromo = leftCapture & promotionRow & pathInCheckMask;
+        long rightCapturePromo = rightCapture & promotionRow & pathInCheckMask;
+        leftCapture &= pathInCheckMask & ~promotionRow;
+        rightCapture &= pathInCheckMask & ~promotionRow;
 
-            if (!isPiecePinned(startSquare) || alignMask[startSquare][friendlyKingSquare] == alignMask[targetSquare][friendlyKingSquare]) {
-                allMoves.add(new Move(piece, startSquare, targetSquare, board.square[targetSquare]));
+        while (leftCapture != 0) {
+            Pair<Integer, Long> plsbResult = popLeastSignificantBit(leftCapture);
+            int toPosition = plsbResult.first;
+            leftCapture = plsbResult.second;
+            int fromPosition = toPosition + moveDirection * 9;
+
+            if (!isPiecePinned(fromPosition) || pathMask[fromPosition][friendlyKingPos] == pathMask[toPosition][friendlyKingPos]) {
+                allMoves.add(new Move(piece, fromPosition, toPosition, board.chessboard[toPosition]));
             }
         }
 
-        while (captureB != 0) {
-            Pair<Integer, Long> plsbResult = popLeastSignificantBit(captureB);
-            int targetSquare = plsbResult.first;
-            captureB = plsbResult.second;
-            int startSquare = targetSquare + pushDir * 7;
+        while (rightCapture != 0) {
+            Pair<Integer, Long> plsbResult = popLeastSignificantBit(rightCapture);
+            int toPosition = plsbResult.first;
+            rightCapture = plsbResult.second;
+            int fromPosition = toPosition + moveDirection * 7;
 
-            if (!isPiecePinned(startSquare) || alignMask[startSquare][friendlyKingSquare] == alignMask[targetSquare][friendlyKingSquare]) {
-                allMoves.add(new Move(piece, startSquare, targetSquare, board.square[targetSquare]));
+            if (!isPiecePinned(fromPosition) || pathMask[fromPosition][friendlyKingPos] == pathMask[toPosition][friendlyKingPos]) {
+                allMoves.add(new Move(piece, fromPosition, toPosition, board.chessboard[toPosition]));
             }
         }
 
-        // Promotions
-        while (pushPromotions != 0) {
-            Pair<Integer, Long> plsbResult = popLeastSignificantBit(pushPromotions);
-            int targetSquare = plsbResult.first;
-            pushPromotions = plsbResult.second;
-            int startSquare = targetSquare + pushOffset;
+        long pushPromo = promotionRow & oneSquarePush & pathInCheckMask;
+        while (pushPromo != 0) {
+            Pair<Integer, Long> plsbResult = popLeastSignificantBit(pushPromo);
+            int toPosition = plsbResult.first;
+            pushPromo = plsbResult.second;
+            int fromPosition = toPosition + moveOffset;
 
-            if (!isPiecePinned(startSquare)) {
-                Move move = new Move(piece, startSquare, targetSquare, board.square[targetSquare]);
+            if (!isPiecePinned(fromPosition)) {
+                Move move = new Move(piece, fromPosition, toPosition, board.chessboard[toPosition]);
                 move.promotionFlag = true;
                 allMoves.add(move);
             }
         }
 
-        while (capturePromotionsA != 0) {
-            Pair<Integer, Long> plsbResult = popLeastSignificantBit(capturePromotionsA);
-            int targetSquare = plsbResult.first;
-            capturePromotionsA = plsbResult.second;
-            int startSquare = targetSquare + pushDir * 9;
+        while (leftCapturePromo != 0) {
+            Pair<Integer, Long> plsbResult = popLeastSignificantBit(leftCapturePromo);
+            int toPosition = plsbResult.first;
+            leftCapturePromo = plsbResult.second;
+            int fromPosition = toPosition + moveDirection * 9;
 
-            if (!isPiecePinned(startSquare) || alignMask[startSquare][friendlyKingSquare] == alignMask[targetSquare][friendlyKingSquare]){
-                Move move = new Move(piece, startSquare, targetSquare, board.square[targetSquare]);
+            if (!isPiecePinned(fromPosition) || pathMask[fromPosition][friendlyKingPos] == pathMask[toPosition][friendlyKingPos]){
+                Move move = new Move(piece, fromPosition, toPosition, board.chessboard[toPosition]);
                 move.promotionFlag = true;
                 allMoves.add(move);
             }
         }
 
-        while (capturePromotionsB != 0) {
-            Pair<Integer, Long> plsbResult = popLeastSignificantBit(capturePromotionsB);
-            int targetSquare = plsbResult.first;
-            capturePromotionsB = plsbResult.second;
-            int startSquare = targetSquare + pushDir * 7;
+        while (rightCapturePromo != 0) {
+            Pair<Integer, Long> plsbResult = popLeastSignificantBit(rightCapturePromo);
+            int toPosition = plsbResult.first;
+            rightCapturePromo = plsbResult.second;
+            int fromPosition = toPosition + moveDirection * 7;
 
-            if (!isPiecePinned(startSquare) || alignMask[startSquare][friendlyKingSquare] == alignMask[targetSquare][friendlyKingSquare]) {
-                Move move = new Move(piece, startSquare, targetSquare, board.square[targetSquare]);
+            if (!isPiecePinned(fromPosition) || pathMask[fromPosition][friendlyKingPos] == pathMask[toPosition][friendlyKingPos]) {
+                Move move = new Move(piece, fromPosition, toPosition, board.chessboard[toPosition]);
                 move.promotionFlag = true;
                 allMoves.add(move);
             }
         }
 
-        // En passant
+        long enPassantRow = friendlyColour > 0 ? row4 : row5;
+        long enPassantAttackingPawns = pawns & enPassantRow;
         Move lastMove = board.getLastMove();
         if (lastMove.pawnTwoSquaresMove) {
             while (enPassantAttackingPawns != 0) {
                 Pair<Integer, Long> plsbResult = popLeastSignificantBit(enPassantAttackingPawns);
-                int startSquare = plsbResult.first;
+                int fromPosition = plsbResult.first;
                 enPassantAttackingPawns = plsbResult.second;
-                int targetSquare = startSquare - pushOffset - 1;
-                if (startSquare == lastMove.targetSquare + 1 && !isInCheckAfterenPassant(startSquare, targetSquare, lastMove.targetSquare)) {
-                    Move move = new Move(piece, startSquare, targetSquare, board.square[targetSquare]);
+                int toPosition = fromPosition - moveOffset - 1;
+                if (fromPosition == lastMove.targetSquare + 1 && !isEnPassantInvalid(fromPosition, toPosition, lastMove.targetSquare)) {
+                    Move move = new Move(piece, fromPosition, toPosition, board.chessboard[toPosition]);
                     move.enPassantFlag = true;
                     move.enPassantPosition = lastMove.targetSquare;
                     allMoves.add(move);
                 }
-                targetSquare = startSquare - pushOffset + 1;
-                if (startSquare == lastMove.targetSquare - 1 && !isInCheckAfterenPassant(startSquare, targetSquare, lastMove.targetSquare)) {
-                    Move move = new Move(piece, startSquare, targetSquare, board.square[targetSquare]);
+                toPosition = fromPosition - moveOffset + 1;
+                if (fromPosition == lastMove.targetSquare - 1 && !isEnPassantInvalid(fromPosition, toPosition, lastMove.targetSquare)) {
+                    Move move = new Move(piece, fromPosition, toPosition, board.chessboard[toPosition]);
                     move.enPassantFlag = true;
                     move.enPassantPosition = lastMove.targetSquare;
                     allMoves.add(move);
@@ -486,16 +356,118 @@ public class MoveGenerator {
         }
     }
 
-    private boolean isInCheckAfterenPassant(int startSquare, int targetSquare, int captureSquare) {
-        if (!isPiecePinned(startSquare) || alignMask[startSquare][friendlyKingSquare] == alignMask[targetSquare][friendlyKingSquare]){
-            long opponentOrthogonalSliders = bitboard.orthogonalSlider[enemyIndex];
+    private void computeMovesForKnights() {
+        long knights = bitboard.pieces[friendlyIndex][KNIGHT] & notPinnedPaths;
+        long possibleDestinations = opponentOrEmptySquares & pathInCheckMask & captureMask;
+
+        while (knights != 0) {
+            Pair<Integer, Long> plsbResult = popLeastSignificantBit(knights);
+            int fromPosition = plsbResult.first;
+            knights = plsbResult.second;
+            long destinations = bitboard.knightAttacks[fromPosition] & possibleDestinations;
+
+            while (destinations != 0) {
+                plsbResult = popLeastSignificantBit(destinations);
+                int toPosition = plsbResult.first;
+                destinations = plsbResult.second;
+                allMoves.add(new Move(KNIGHT*friendlyColour, fromPosition, toPosition, board.chessboard[toPosition]));
+            }
+        }
+    }
+
+    private void computeMovesForSliders() {
+        long possibleDestinations = opponentOrEmptySquares & pathInCheckMask & captureMask;
+        long diagSlidingPieces = bitboard.diagonalSlider[friendlyIndex];
+        long orthoSlidingPieces = bitboard.orthogonalSlider[friendlyIndex];
+
+        if (isInCheck) {
+            diagSlidingPieces &= ~pinnedPaths;
+            orthoSlidingPieces &= ~pinnedPaths;
+        }
+
+        while (diagSlidingPieces != 0) {
+            Pair<Integer, Long> plsbResult = popLeastSignificantBit(diagSlidingPieces);
+            int fromPosition = plsbResult.first;
+            diagSlidingPieces = plsbResult.second;
+            long destinations = bitboard.computeSlidingAttacks(fromPosition, allPieces, true) & possibleDestinations;
+
+            if (isPiecePinned(fromPosition)) {
+                destinations &= dirPathMask[fromPosition][friendlyKingPos];;
+            }
+            while (destinations != 0) {
+                plsbResult = popLeastSignificantBit(destinations);
+                int toPosition = plsbResult.first;
+                destinations = plsbResult.second;
+                allMoves.add(new Move(board.chessboard[fromPosition], fromPosition, toPosition, board.chessboard[toPosition]));
+            }
+        }
+
+        while (orthoSlidingPieces != 0) {
+            Pair<Integer, Long> plsbResult = popLeastSignificantBit(orthoSlidingPieces);
+            int fromPosition = plsbResult.first;
+            orthoSlidingPieces = plsbResult.second;
+            long destinations = bitboard.computeSlidingAttacks(fromPosition, allPieces, false) & possibleDestinations;
+
+            if (isPiecePinned(fromPosition)) {
+                destinations &= dirPathMask[fromPosition][friendlyKingPos];
+            }
+            while (destinations != 0) {
+                plsbResult = popLeastSignificantBit(destinations);
+                int toPosition = plsbResult.first;
+                destinations = plsbResult.second;
+                allMoves.add(new Move(board.chessboard[fromPosition], fromPosition, toPosition, board.chessboard[toPosition]));
+            }
+        }
+    }
+
+    private void computeMovesForKing() {
+        long possibleDestinations = ~(oppAttackMap | friendlyPieces);
+        long kingDestinations = possibleDestinations & captureMask & bitboard.kingMoves[friendlyKingPos];
+        int piece = KING * friendlyColour;
+        while (kingDestinations != 0) {
+            Pair<Integer, Long> plsbResult = popLeastSignificantBit(kingDestinations);
+            int toPosition = plsbResult.first;
+            kingDestinations = plsbResult.second;
+            allMoves.add(new Move(piece, friendlyKingPos, toPosition, board.chessboard[toPosition]));
+        }
+
+        if (!isInCheck && quietMoves) {
+            long castlingBlockersMask = oppAttackMap | allPieces;
+            if (board.isQueensideCastlingEnabled(friendlyColour)) {
+                long castlingSideMask = friendlyColour > 0 ? wQueenCastlingMask : bQueenCastlingMask;
+                long castlingBlockMask = friendlyColour > 0 ? wQueenCastlingMask2 : bQueenCastlingMask2;
+                if ((castlingBlockMask & castlingBlockersMask) == 0 && (castlingSideMask & allPieces) == 0) {
+                    int toPosition = friendlyColour > 0 ? 58 : 2;
+                    Move move = new Move(piece, friendlyKingPos, toPosition, board.chessboard[toPosition]);
+                    move.castlingFlag = true;
+                    move.preCastlingPosition = toPosition - 2;
+                    move.postCastlingPosition = toPosition + 1;
+                    allMoves.add(move);
+                }
+            }
+            if (board.isKingsideCastlingEnabled(friendlyColour)) {
+                long castlingSideMask = friendlyColour > 0 ? wKingCastlingMask : bKingCastlingMask;
+                if ((castlingSideMask & castlingBlockersMask) == 0) {
+                    int toPosition = friendlyColour > 0 ? 62 : 6;
+                    Move move = new Move(piece, friendlyKingPos, toPosition, board.chessboard[toPosition]);
+                    move.castlingFlag = true;
+                    move.preCastlingPosition = toPosition + 1;
+                    move.postCastlingPosition = toPosition - 1;
+                    allMoves.add(move);
+                }
+            }
+        }
+    }
+
+    private boolean isEnPassantInvalid(int fromPos, int toPos, int capturePos) {
+        if (!isPiecePinned(fromPos) || pathMask[fromPos][friendlyKingPos] == pathMask[toPos][friendlyKingPos]){
+            long opponentOrthogonalSliders = bitboard.orthogonalSlider[opponentIndex];
 
             if (opponentOrthogonalSliders != 0) {
-                long maskedBlockers = (allPieces ^ (1L << 63 - captureSquare | 1L << 63 - startSquare | 1L << 63 - targetSquare));
-                long rookAttacks = bitboard.getSliderAttacks(friendlyKingSquare, maskedBlockers, false);
+                long blockers = (allPieces ^ (1L << 63 - capturePos | 1L << 63 - fromPos | 1L << 63 - toPos));
+                long rookAttacks = bitboard.computeSlidingAttacks(friendlyKingPos, blockers, false);
                 return (rookAttacks & opponentOrthogonalSliders) != 0;
             }
-
             return false;
         }
         return  true;
@@ -503,6 +475,6 @@ public class MoveGenerator {
 
     private boolean isPiecePinned(int square)
     {
-        return ((pinRays >> 63 - square) & 1) != 0;
+        return ((pinnedPaths >> 63 - square) & 1) != 0;
     }
 }

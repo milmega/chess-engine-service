@@ -1,12 +1,14 @@
-package com.chessengine.chessengineservice;
+package com.chessengine.chessengineservice.Board;
+
+import com.chessengine.chessengineservice.Structures.Pair;
 
 import static com.chessengine.chessengineservice.Helpers.BoardHelper.*;
 import static java.lang.Math.abs;
 
 public class Bitboard {
 
-    Pair<Integer, Integer>[] orthoMoves = new Pair[] { new Pair<>(-1, 0), new Pair<>(0, 1), new Pair<>(1, 0), new Pair<>(0, -1) };
-    Pair<Integer, Integer>[] diagMoves = new Pair[] { new Pair<>(-1, -1), new Pair<>(-1, 1), new Pair<>(1, 1), new Pair<>(1, -1) };
+    Pair<Integer, Integer>[] orthogonalMoves = new Pair[] { new Pair<>(-1, 0), new Pair<>(0, 1), new Pair<>(1, 0), new Pair<>(0, -1) };
+    Pair<Integer, Integer>[] diagonalMoves = new Pair[] { new Pair<>(-1, -1), new Pair<>(-1, 1), new Pair<>(1, 1), new Pair<>(1, -1) };
     Pair<Integer, Integer>[] knightMoves = new Pair[] {
             new Pair<>(-2, -1),
             new Pair<>(-2, 1),
@@ -30,8 +32,8 @@ public class Bitboard {
     public static final long row5 = lastRow << 24;
     public long[] knightAttacks;
     public long[] kingMoves;
-    public long[] whitePawnAttacks;
-    public long[] blackPawnAttacks;
+    public long[] wPawnAttacks;
+    public long[] bPawnAttacks;
     public long[] orthogonalSlider = {0, 0}; // map of rooks and queens
     public long[] diagonalSlider = {0, 0}; // map of bishops and queens
     MagicBitboard magicBitboard;
@@ -72,8 +74,8 @@ public class Bitboard {
     public void init() {
         knightAttacks = new long[64];
         kingMoves = new long[64];
-        whitePawnAttacks = new long[64];
-        blackPawnAttacks = new long[64];
+        wPawnAttacks = new long[64];
+        bPawnAttacks = new long[64];
 
         for (int i = 0; i < 8; i++) {
             for (int j = 0; j < 8; j++) {
@@ -88,16 +90,16 @@ public class Bitboard {
         for (int dir = 0; dir < 4; dir++) {
             // pawn attacks
             if (areCoorsValid(x - 1, y + 1)) {
-                whitePawnAttacks[square] |= 1L << 63 -  coorsToPos(x - 1, y + 1);
+                wPawnAttacks[square] |= 1L << 63 -  coorsToPos(x - 1, y + 1);
             }
             if (areCoorsValid(x - 1, y - 1)) {
-                whitePawnAttacks[square] |= 1L << 63 -  coorsToPos(x - 1, y - 1);
+                wPawnAttacks[square] |= 1L << 63 -  coorsToPos(x - 1, y - 1);
             }
             if (areCoorsValid(x + 1, y + 1)) {
-                blackPawnAttacks[square] |= 1L << 63 -  coorsToPos(x + 1, y + 1);
+                bPawnAttacks[square] |= 1L << 63 -  coorsToPos(x + 1, y + 1);
             }
             if (areCoorsValid(x + 1, y - 1)) {
-                blackPawnAttacks[square] |= 1L << 63 -  coorsToPos(x + 1, y - 1);
+                bPawnAttacks[square] |= 1L << 63 -  coorsToPos(x + 1, y - 1);
             }
 
             // knight moves
@@ -110,55 +112,49 @@ public class Bitboard {
             }
 
             // king moves
-            for (int distance = 1; distance < 8; distance++) {
-                int newOrthoX = x + orthoMoves[dir].first * distance;
-                int newOrthoY = y + orthoMoves[dir].second * distance;
-                int newDiagX = x + diagMoves[dir].first * distance;
-                int newDiagY = y + diagMoves[dir].second * distance;
+            int newOrthoX = x + orthogonalMoves[dir].first;
+            int newOrthoY = y + orthogonalMoves[dir].second;
+            int newDiagX = x + diagonalMoves[dir].first;
+            int newDiagY = y + diagonalMoves[dir].second;
 
-                if (areCoorsValid(newOrthoX, newOrthoY)) {
-                    if (distance == 1) {
-                        kingMoves[square] |= 1L << 63 - coorsToPos(newOrthoX, newOrthoY);
-                    }
-                }
-                if (areCoorsValid(newDiagX, newDiagY)) {
-                    if (distance == 1) {
-                        kingMoves[square] |= 1L << 63 - coorsToPos(newDiagX, newDiagY);
-                    }
-                }
+            if (areCoorsValid(newOrthoX, newOrthoY)) {
+                kingMoves[square] |= 1L << 63 - coorsToPos(newOrthoX, newOrthoY);
+            }
+            if (areCoorsValid(newDiagX, newDiagY)) {
+                kingMoves[square] |= 1L << 63 - coorsToPos(newDiagX, newDiagY);
             }
         }
     }
 
-    public void setSquare(int piece, int index) {
+    public void setBit(int piece, int index) {
         int colourIndex = piece > 0 ? 0 : 1;
         long mask = 0x1L << (63 - index);
         pieces[colourIndex][abs(piece)] |= mask;
         pieces[colourIndex][0] |= mask;
     }
 
-    public void clearSquare(int piece, int index) {
+    public void clearBit(int piece, int index) {
         int colourIndex = piece > 0 ? 0 : 1;
         long mask = ~(0x1L << (63 - index));
         pieces[colourIndex][abs(piece)] &= mask;
         pieces[colourIndex][0] &= mask;
     }
 
-    public void toggleSquare(int piece, int index) {
+    public void toggleBit(int piece, int index) {
         int colourIndex = piece > 0 ? 0 : 1;
         long mask = 0x1L << (63 - index);
         pieces[colourIndex][abs(piece)] ^= mask;
         pieces[colourIndex][0] ^= mask;
     }
 
-    public void toggleSquares(int piece, int indexA, int indexB) {
+    public void toggleBits(int piece, int indexA, int indexB) {
         int colourIndex = piece > 0 ? 0 : 1;
         long mask = 0x1L << (63 - indexA) | 0x1L << (63 - indexB);
         pieces[colourIndex][abs(piece)] ^= mask;
         pieces[colourIndex][0] ^= mask;
     }
 
-    public long getPawnAttacks(int colour) {
+    public long computePawnAttacks(int colour) {
         if (colour > 0) {
             return ((pieces[0][1] << 9) & notLastColumn) | ((pieces[0][1] << 7) & notFirstColumn);
         }
@@ -166,7 +162,7 @@ public class Bitboard {
     }
 
 
-    public long getSliderAttacks(int startSquare, long blockers, boolean diagonal) {
-        return magicBitboard.getSliderAttacks(63 - startSquare, blockers, diagonal);
+    public long computeSlidingAttacks(int startSquare, long blockers, boolean diagonal) {
+        return magicBitboard.computeSlidingAttacks(63 - startSquare, blockers, diagonal);
     }
 }

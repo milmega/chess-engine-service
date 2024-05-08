@@ -1,8 +1,12 @@
-package com.chessengine.chessengineservice;
+package com.chessengine.chessengineservice.Board;
 
+import com.chessengine.chessengineservice.Game.GameDetails;
 import com.chessengine.chessengineservice.Helpers.PGNHelper;
 import com.chessengine.chessengineservice.Helpers.Zobrist;
+import com.chessengine.chessengineservice.Structures.Move;
 import com.chessengine.chessengineservice.MoveGenerator.MoveGenerator;
+import com.chessengine.chessengineservice.Transposition.TranspositionTable;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Stack;
@@ -11,14 +15,14 @@ import static com.chessengine.chessengineservice.Helpers.BoardHelper.*;
 import static com.chessengine.chessengineservice.Helpers.EvaluatorHelper.*;
 import static com.chessengine.chessengineservice.Helpers.Zobrist.pieceToIndex;
 import static com.chessengine.chessengineservice.MoveGenerator.PrecomputedMoveData.precomputeMoveData;
-import static com.chessengine.chessengineservice.Piece.*;
+import static com.chessengine.chessengineservice.Structures.Piece.*;
 import static java.lang.Math.abs;
 
 public class Board {
     private final Stack<GameDetails> gameDetailsStack;
     public final MoveGenerator moveGenerator;
     public final Bitboard bitboard;
-    public int[] square;
+    public int[] chessboard;
     public long zobristKey;
     public TranspositionTable tTable;
     public String pgnCode;
@@ -42,56 +46,9 @@ public class Board {
         precomputeMoveData();
         resetBoard();
     }
-    /*
-     {
-                -4, -2, -3, -5, -6, -3, -2, -4,
-                -1, -1, -1, -1, -1, -1, -1, -1,
-                0, 0, 0, 0, 0, 0, 0, 0,
-                0, 0, 0, 0, 0, 0, 0, 0,
-                0, 0, 0, 0, 0, 0, 0, 0,
-                0, 0, 0, 0, 0, 0, 0, 0,
-                1, 1, 1, 1, 1, 1, 1, 1,
-                4, 2, 3, 5, 6, 3, 2, 4}
-    * */
-
-    public void initTestBoard() {
-        square = new int[] {
-                -4, 0, -3, -5, -6, 0, 0, -4,
-                0, -1, -1, -2, 0, -1, -1, -1,
-                -1, 0, 0, 0, -1, -2, 0, 0,
-                0, 0, 0, 0, 0, 0, 0, 0,
-                0, 0, 0, 1, 5, 0, 0, 0,
-                1, 0, 1, 0, 0, 2, 0, 0,
-                0, 0, 1, 0, 0, 1, 1, 1,
-                4, 0, 3, 0, 6, 3, 0, 4};
-        bitboard.pieces = new long[2][7];
-        material = new int[][] {{0, 0, 0, 0, 0, 0, 0}, {0, 0, 0, 0, 0, 0, 0}};
-        for (int i = 0; i < square.length; i++) {
-            if (square[i] > 0) {
-                if (square[i] == KING) {
-                    setKingPosition(1, i);
-                }
-                material[0][square[i]]++;
-                bitboard.pieces[0][0] |= 1L << 63 - i;
-                bitboard.pieces[0][square[i]] |= 1L << 63 - i;
-            }
-            if (square[i] < 0) {
-                if (square[i] == -KING) {
-                    setKingPosition(-1, i);
-                }
-                material[1][-square[i]]++;
-                bitboard.pieces[1][0] |= 1L << 63 - i;
-                bitboard.pieces[1][-square[i]] |= 1L << 63 - i;
-            }
-        }
-        setGameStage(GAME_START);
-        castlingRights = 0b1111;
-        pgnCode = "";
-        bitboard.updateBitboards();
-    }
 
     public void initializeBoard() {
-        square = new int[] {
+        chessboard = new int[] {
                 -4, -2, -3, -5, -6, -3, -2, -4,
                 -1, -1, -1, -1, -1, -1, -1, -1,
                 0, 0, 0, 0, 0, 0, 0, 0,
@@ -125,7 +82,7 @@ public class Board {
     }
 
     public List<Move> getAllMoves(int colour) {
-        return moveGenerator.generateMoves(colour, false);
+        return moveGenerator.computeAllMoves(colour, false);
     }
 
     /* this method is called after each move to check if it led to a mate or a draw
@@ -147,8 +104,8 @@ public class Board {
     public void makeMove(Move move, boolean unmakeMove) {
         int start = move.startSquare;
         int target = move.targetSquare;
-        int piece = square[start];
-        int targetPiece = square[target];
+        int piece = chessboard[start];
+        int targetPiece = chessboard[target];
         int oldCastling = castlingRights;
         int newCastling = castlingRights;
         long newZobristKey = zobristKey;
@@ -164,10 +121,10 @@ public class Board {
         if (abs(piece) == KING) {
             setKingPosition(move.colour, target);
             newCastling = move.colour > 0 ? 0b1100 : 0b0011;
-            if (move.castlingFlag) { // if king is doing castling, move rook accordingly
+            if (move.castlingFlag) {
                 movePiece(move.preCastlingPosition, move.postCastlingPosition, 0, false);
-                newZobristKey ^= Zobrist.piecesArray[pieceToIndex(ROOK*move.colour)][move.preCastlingPosition];
-                newZobristKey ^= Zobrist.piecesArray[pieceToIndex(ROOK*move.colour)][move.postCastlingPosition];
+                newZobristKey ^= Zobrist.allPieces[pieceToIndex(ROOK*move.colour)][move.preCastlingPosition];
+                newZobristKey ^= Zobrist.allPieces[pieceToIndex(ROOK*move.colour)][move.postCastlingPosition];
             }
         }
 
@@ -185,16 +142,16 @@ public class Board {
 
         movePiece(start, target, targetPiece, false);
         if (move.promotionFlag) {
-            square[target] = QUEEN*move.colour;
+            chessboard[target] = QUEEN*move.colour;
             material[colourIndex][QUEEN]++;
             material[colourIndex][PAWN]--;
-            bitboard.clearSquare(move.piece, target);
-            bitboard.setSquare(QUEEN*move.colour, target);
+            bitboard.clearBit(move.piece, target);
+            bitboard.setBit(QUEEN*move.colour, target);
         } else if (move.enPassantFlag) {
-            square[move.enPassantPosition] = 0;
+            chessboard[move.enPassantPosition] = 0;
             material[1-colourIndex][PAWN]--;
-            bitboard.clearSquare(-PAWN*move.colour, move.enPassantPosition);
-            newZobristKey ^= Zobrist.piecesArray[pieceToIndex(-PAWN*move.colour)][move.enPassantPosition];
+            bitboard.clearBit(-PAWN*move.colour, move.enPassantPosition);
+            newZobristKey ^= Zobrist.allPieces[pieceToIndex(-PAWN*move.colour)][move.enPassantPosition];
         } else if (move.pawnTwoSquaresMove) {
             newZobristKey ^= Zobrist.enPassantColumn[enPassantColumn];
             enPassantColumn = move.fromY;
@@ -206,8 +163,8 @@ public class Board {
         newZobristKey ^= Zobrist.piecesArray[pieceToIndex(square[target])][target];
 
         if (oldCastling != newCastling) {
-            newZobristKey ^= Zobrist.castlingRights[oldCastling]; // remove old castling rights state
-            newZobristKey ^= Zobrist.castlingRights[castlingRights]; // add new castling rights state
+            newZobristKey ^= Zobrist.castling[oldCastling]; // remove old castling rights state
+            newZobristKey ^= Zobrist.castling[castlingRights]; // add new castling rights state
         }
 
         moveHistory.add(move);
@@ -219,7 +176,7 @@ public class Board {
             movesSinceCaptureOrPawnMove = 0;
         }
         if (targetPiece != 0) {
-            newZobristKey ^= Zobrist.piecesArray[pieceToIndex(targetPiece)][target];
+            newZobristKey ^= Zobrist.allPieces[pieceToIndex(targetPiece)][target];
             captures++;
             movesSinceCaptureOrPawnMove = 0;
             if (captures == 3) {
@@ -252,12 +209,12 @@ public class Board {
         if (move.castlingFlag) {
             movePiece(move.postCastlingPosition, move.preCastlingPosition, 0, false);
         } else if (move.promotionFlag) {
-            square[target] = PAWN*move.colour;
-            bitboard.clearSquare(QUEEN*move.colour, target);
-            bitboard.setSquare(move.piece, target);
+            chessboard[target] = PAWN*move.colour;
+            bitboard.clearBit(QUEEN*move.colour, target);
+            bitboard.setBit(move.piece, target);
         } else if (move.enPassantFlag) {
-            square[move.enPassantPosition] = -PAWN*move.colour;
-            bitboard.setSquare(-PAWN*move.colour, move.enPassantPosition);
+            chessboard[move.enPassantPosition] = -PAWN*move.colour;
+            bitboard.setBit(-PAWN*move.colour, move.enPassantPosition);
         }
 
         moveHistory.removeLast();
@@ -300,14 +257,14 @@ public class Board {
             return true;
         }
         if (material[0][2] == 0 && material[0][3] == 1 && material[1][2] == 0 && material[1][3] == 1) { //if both sides have a bishop - check if on the same colour
-        int whiteBishop = Long.numberOfLeadingZeros(bitboard.pieces[0][BISHOP]);
-        int whiteBishopRow = posToX(whiteBishop);
-        int whiteBishopColumn = posToY(whiteBishop);
-        int blackBishop = Long.numberOfLeadingZeros(bitboard.pieces[1][BISHOP]);
-        int blackBishopRow = posToX(blackBishop);
-        int blackBishopColumn = posToY(blackBishop);
-        boolean whiteOnWhite = (whiteBishopRow%2 == 0 && whiteBishopColumn % 2 == 0) || (whiteBishopRow%2 == 1 && whiteBishopColumn % 2 == 1);
-        boolean blackOnWhite = (blackBishopRow%2 == 0 && blackBishopColumn % 2 == 0) || (blackBishopRow%2 == 1 && blackBishopColumn % 2 == 1);
+            int whiteBishop = Long.numberOfLeadingZeros(bitboard.pieces[0][BISHOP]);
+            int whiteBishopRow = posToX(whiteBishop);
+            int whiteBishopColumn = posToY(whiteBishop);
+            int blackBishop = Long.numberOfLeadingZeros(bitboard.pieces[1][BISHOP]);
+            int blackBishopRow = posToX(blackBishop);
+            int blackBishopColumn = posToY(blackBishop);
+            boolean whiteOnWhite = (whiteBishopRow%2 == 0 && whiteBishopColumn % 2 == 0) || (whiteBishopRow%2 == 1 && whiteBishopColumn % 2 == 1);
+            boolean blackOnWhite = (blackBishopRow%2 == 0 && blackBishopColumn % 2 == 0) || (blackBishopRow%2 == 1 && blackBishopColumn % 2 == 1);
             return whiteOnWhite == blackOnWhite;
         }
         return false;
@@ -392,16 +349,16 @@ public class Board {
 
     // moves a piece from start to target square. TargetPiece is a piece that was on a target square (needed for unmaking a move)
     private void movePiece(int start, int target, int targetPiece, boolean unmake) {
-        int piece = square[start];
-        square[target] = piece;
-        square[start] = 0;
-        bitboard.toggleSquares(piece, start, target);
+        int piece = chessboard[start];
+        chessboard[target] = piece;
+        chessboard[start] = 0;
+        bitboard.toggleBits(piece, start, target);
         if (targetPiece != 0) {
             if (unmake) {
-                square[start] = targetPiece;
-                bitboard.toggleSquare(targetPiece, start);
+                chessboard[start] = targetPiece;
+                bitboard.toggleBit(targetPiece, start);
             } else {
-                bitboard.toggleSquare(targetPiece, target);
+                bitboard.toggleBit(targetPiece, target);
             }
         }
     }

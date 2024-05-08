@@ -1,4 +1,4 @@
-package com.chessengine.chessengineservice;
+package com.chessengine.chessengineservice.Game;
 
 import java.util.Timer;
 import java.util.TimerTask;

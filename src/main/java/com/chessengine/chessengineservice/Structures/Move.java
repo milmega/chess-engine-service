@@ -1,4 +1,4 @@
-package com.chessengine.chessengineservice;
+package com.chessengine.chessengineservice.Structures;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 

@@ -1,10 +1,10 @@
 package com.chessengine.chessengineservice.Helpers;
 
-import com.chessengine.chessengineservice.Move;
+import com.chessengine.chessengineservice.Structures.Move;
 
 import java.util.List;
 
-import static com.chessengine.chessengineservice.Piece.*;
+import static com.chessengine.chessengineservice.Structures.Piece.*;
 import static java.lang.Math.abs;
 
 public class PGNHelper {

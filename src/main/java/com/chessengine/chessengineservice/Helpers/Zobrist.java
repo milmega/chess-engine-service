@@ -1,30 +1,29 @@
 package com.chessengine.chessengineservice.Helpers;
 
-import com.chessengine.chessengineservice.Board;
+import com.chessengine.chessengineservice.Board.Board;
 
 import java.util.Random;
 
 public class Zobrist {
-
-    public static long[][] piecesArray = new long[15][64];
-    public static long[] castlingRights = new long[16];
+    public static long colourToMove;
+    public static long[][] allPieces = new long[15][64];
+    public static long[] castling = new long[16];
     public static long[] enPassantColumn = new long[9];
-    public static long sideToMove;
 
     public static long createZobristKey(Board board) {
         initialize();
         long key = 0;
         for (int i = 0; i < 64; i++) {
-            int piece = board.square[i];
+            int piece = board.chessboard[i];
             if (piece != 0) {
-                key ^= piecesArray[pieceToIndex(piece)][i];
+                key ^= allPieces[pieceToIndex(piece)][i];
             }
         }
         key ^= enPassantColumn[board.getEnPassantColumn()];
         if (board.getColourToMove() == -1) {
-            key ^= sideToMove;
+            key ^= colourToMove;
         }
-        key ^= castlingRights[board.getCastling()];
+        key ^= castling[board.getCastling()];
         return key;
     }
 
@@ -35,9 +34,9 @@ public class Zobrist {
         return 8-piece; // converting piece value to index (white from 1 to 6, black from 9 to 14)
     }
 
-    static long random64BitNumber(Random rng) {
+    static long generateRandomNumber(Random randomNumberGenerator) {
         byte[] buffer = new byte[8];
-        rng.nextBytes(buffer);
+        randomNumberGenerator.nextBytes(buffer);
         return convertToLong(buffer);
     }
 
@@ -50,24 +49,24 @@ public class Zobrist {
     }
 
     static void initialize() {
-        int seed = 29426028;
-        Random rng = new Random(seed);
+        int seed = 56709751;
+        Random randomNumGenerator = new Random(seed);
 
-        for (int squareIndex = 0; squareIndex < 64; squareIndex++) {
-            for (int piece = 1; piece < 7; piece++) {
-                piecesArray[piece][squareIndex] = random64BitNumber(rng);
+        colourToMove = generateRandomNumber(randomNumGenerator);
+        for (int i = 0; i < 64; i++) {
+            for (int j = 1; j < 7; j++) {
+                allPieces[j][i] = generateRandomNumber(randomNumGenerator);
             }
-            for (int piece = 9; piece < 15; piece++) {
-                piecesArray[piece][squareIndex] = random64BitNumber(rng);
+            for (int j = 9; j < 15; j++) {
+                allPieces[j][i] = generateRandomNumber(randomNumGenerator);
             }
-        }
-        for (int i = 0; i < castlingRights.length; i++) {
-            castlingRights[i] = random64BitNumber(rng);
         }
         enPassantColumn[0] = 0;
         for (int i = 1; i < enPassantColumn.length; i++) {
-            enPassantColumn[i] = random64BitNumber(rng);
+            enPassantColumn[i] = generateRandomNumber(randomNumGenerator);
         }
-        sideToMove = random64BitNumber(rng);
+        for (int i = 0; i < castling.length; i++) {
+            castling[i] = generateRandomNumber(randomNumGenerator);
+        }
     }
 }

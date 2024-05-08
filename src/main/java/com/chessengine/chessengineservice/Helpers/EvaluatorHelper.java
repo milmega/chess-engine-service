@@ -1,8 +1,7 @@
 package com.chessengine.chessengineservice.Helpers;
 
-import static com.chessengine.chessengineservice.Piece.*;
-import static com.chessengine.chessengineservice.Piece.KING;
-import static java.lang.Math.abs;
+import static com.chessengine.chessengineservice.Structures.Piece.*;
+import static com.chessengine.chessengineservice.Structures.Piece.KING;
 
 public class EvaluatorHelper {
     public static final int GAME_START = 0;

@@ -1,4 +1,4 @@
-package com.chessengine.chessengineservice;
+package com.chessengine.chessengineservice.Structures;
 
 public class Piece {
     public static final int EMPTY = 0;

@@ -1,4 +1,6 @@
-package com.chessengine.chessengineservice;
+package com.chessengine.chessengineservice.Game;
+
+import com.chessengine.chessengineservice.Structures.Move;
 
 import static com.chessengine.chessengineservice.Helpers.BoardHelper.getDeepCopy;
 

@@ -1,7 +1,7 @@
 package com.chessengine.chessengineservice.OpeningDB;
 
 import com.chessengine.chessengineservice.Helpers.PGNHelper;
-import com.chessengine.chessengineservice.Move;
+import com.chessengine.chessengineservice.Structures.Move;
 
 import java.io.InputStream;
 import java.util.*;

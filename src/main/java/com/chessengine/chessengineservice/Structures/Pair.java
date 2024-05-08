@@ -1,4 +1,4 @@
-package com.chessengine.chessengineservice;
+package com.chessengine.chessengineservice.Structures;
 
 public class Pair<T, U> {
 

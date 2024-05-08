@@ -1,7 +1,7 @@
 package com.chessengine.chessengineservice.Helpers;
 
-import com.chessengine.chessengineservice.Pair;
-import com.chessengine.chessengineservice.Piece;
+import com.chessengine.chessengineservice.Structures.Pair;
+import com.chessengine.chessengineservice.Structures.Piece;
 
 import java.util.Arrays;
 

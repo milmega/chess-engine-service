@@ -1,4 +1,7 @@
-package com.chessengine.chessengineservice;
+package com.chessengine.chessengineservice.Transposition;
+
+import com.chessengine.chessengineservice.Board.Board;
+import com.chessengine.chessengineservice.Structures.Move;
 
 import java.math.BigInteger;
 
@@ -13,7 +16,6 @@ public class TranspositionTable {
     public int exact = 0;
     public int lowerBound = 1;
     public int upperBound = 2;
-    private boolean disabled = false;
 
     public TranspositionTable(Board board) {
         this.board = board;
@@ -27,13 +29,13 @@ public class TranspositionTable {
         data = new TTData[tableSize];
     }
 
-    public int retrieveScore(int depth, int plyFromRoot, int alpha, int beta) {
+    public int retrieveScore(int layersToExplore, int currDepth, int alpha, int beta) {
         TTData dataRow;
         int index = new BigInteger(Long.toBinaryString(board.zobristKey), 2).mod(count).intValue();
         dataRow = data[index];
 
-        if (dataRow != null && dataRow.zobristKey == board.zobristKey && dataRow.depth >= depth) {
-            int score = verifyScore(dataRow.score, plyFromRoot, -1);
+        if (dataRow != null && dataRow.zobristKey == board.zobristKey && dataRow.depth >= layersToExplore) {
+            int score = verifyScore(dataRow.score, currDepth, -1);
             if (dataRow.nodeType == exact) {
                 return score;
             }
@@ -47,9 +49,11 @@ public class TranspositionTable {
         return -1;
     }
 
-    public void saveScore(int depth, int numPlySearched, int eval, int evalType, Move move) {
-        int index = new BigInteger(Long.toBinaryString(board.zobristKey), 2).mod(count).intValue();
-        TTData dataRow = new TTData(board.zobristKey, verifyScore(eval, numPlySearched, 1), (byte)depth, (byte)evalType, move);
+    public void saveScore(int layersToExplore, int currDepth, int score, int scoreType) {
+        int index = new BigInteger(Long.toBinaryString(board.zobristKey), 2)
+                .mod(count).intValue();
+        TTData dataRow = new TTData(board.zobristKey, verifyScore(score, currDepth, 1),
+                (byte)layersToExplore, (byte)scoreType);
         data[index] = dataRow;
     }
 
