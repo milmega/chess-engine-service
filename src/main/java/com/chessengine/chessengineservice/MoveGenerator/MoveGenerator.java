@@ -132,34 +132,25 @@ public class MoveGenerator {
 
                 if (piece != 0) {
                     if (isSameColour(piece, colour)) {
-                        // First friendly piece we have come across in this direction, so it might be pinned
-                        if (!isFriendlyPieceAlongRay) {
-                            isFriendlyPieceAlongRay = true;
-                        } else { // This is the second friendly piece we've found in this direction, therefore pin is not possible
-                            break;
-                        }
-                    } else { // This square contains an enemy piece
-                        // Check if piece is in bitmask of pieces able to move in current direction
-                        if (isDiagonal && isQueenOrBishop(piece) || !isDiagonal && isQueenOrRook(piece)) {
-                            // Friendly piece blocks the check, so this is a pin
-                            if (isFriendlyPieceAlongRay) {
-                                pinRays |= rayMask;
-                            } else { // No friendly piece blocking the attack, so this is a check
-                                checkRayBitmask |= rayMask;
-                                inDoubleCheck = inCheck; // if already in check, then this is double check
-                                inCheck = true;
+                        if (!friendOnThePath) {
+                            friendOnThePath = true;
+                        } else { break; }
+                    } else {
+                        if (diagonalMove && isQueenOrBishop(piece) || !diagonalMove && isQueenOrRook(piece)) {
+                            if (friendOnThePath) {
+                                pinnedPaths |= pathMask;
+                            } else {
+                                pathInCheckMask |= pathMask;
+                                isInDoubleCheck = isInCheck;
+                                isInCheck = true;
                             }
                             break;
                         }
-                        else {
-                            // This enemy piece is not able to move in the current direction, and so is blocking any checks/pins
-                            break;
-                        }
+                        else { break; }
                     }
                 }
             }
-            // Stop searching for pins if in double check, as the king is the only piece able to move in that case anyway
-            if (inDoubleCheck) {
+            if (isInDoubleCheck) {
                 break;
             }
         }

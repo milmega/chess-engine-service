@@ -76,7 +76,6 @@ public class Board {
         gameStage = GAME_START;
         // 0 - white, 1 - black = skip | pawns | knights | bishops | rooks | queens | king
         material = new int[][] {{0, 8, 2, 2, 2, 1, 1}, {0, 8, 2, 2, 2, 1, 1}};
-        //initTestBoard();
         pgnCode = "";
         zobristKey = Zobrist.createZobristKey(this);
     }
@@ -158,9 +157,9 @@ public class Board {
             newZobristKey ^= Zobrist.enPassantColumn[enPassantColumn];
         }
 
-        newZobristKey ^= Zobrist.sideToMove;
-        newZobristKey ^= Zobrist.piecesArray[pieceToIndex(piece)][start];
-        newZobristKey ^= Zobrist.piecesArray[pieceToIndex(square[target])][target];
+        newZobristKey ^= Zobrist.colourToMove;
+        newZobristKey ^= Zobrist.allPieces[pieceToIndex(piece)][start];
+        newZobristKey ^= Zobrist.allPieces[pieceToIndex(chessboard[target])][target];
 
         if (oldCastling != newCastling) {
             newZobristKey ^= Zobrist.castling[oldCastling]; // remove old castling rights state
@@ -180,7 +179,7 @@ public class Board {
             captures++;
             movesSinceCaptureOrPawnMove = 0;
             if (captures == 3) {
-                gameStage = GAME_MIDDLE; //TODO: add more conditions for moving to next state
+                gameStage = GAME_MIDDLE;
             }
             material[1-colourIndex][abs(targetPiece)]--;
             if (material[0][KNIGHT] + material[0][BISHOP] + material[0][ROOK] + material[0][QUEEN] < 4 ||
